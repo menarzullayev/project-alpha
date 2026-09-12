@@ -246,7 +246,7 @@ def main() -> int:
     migrate_parser.set_defaults(func=migrate)
 
     stage_parser = sub.add_parser("stage")
-    stage_parser.add_argument("stage", choices=STAGES)
+    stage_parser.add_argument("stage", choices=ALL_STAGES)
     stage_parser.add_argument("action", choices=["start", "review", "pass", "block", "resume", "unblock"])
     stage_parser.add_argument("path", nargs="?", default=".")
     stage_parser.add_argument("--approved-by")
