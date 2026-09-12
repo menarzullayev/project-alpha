@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import re
+import uuid
 from pathlib import Path
 
 PRE_PIPELINE = "idea-selection"
@@ -74,15 +75,76 @@ def save(project: Path, state: str) -> None:
     runtime_path.write_text(json.dumps(runtime, indent=2) + "\n", encoding="utf-8")
 
 
+def stage_output(project: Path, stage: str) -> Path:
+    return project / "docs" / stage / "OUTPUT.md"
+
+
+def output_ready(project: Path, stage: str) -> tuple[bool, str]:
+    output = stage_output(project, stage)
+    if not output.exists():
+        return False, f"missing output: {output.relative_to(project)}"
+    text = output.read_text(encoding="utf-8")
+    if any(token in text for token in ("TODO", "TBD")) or "<fill" in text.lower():
+        return False, f"placeholder content remains in {output.relative_to(project)}"
+    return True, "ready"
+
+
+def handoff_dir(project: Path) -> Path:
+    directory = meta_dir(project) / "handoffs"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def handoff_path(project: Path, from_stage: str, to_stage: str) -> Path:
+    return handoff_dir(project) / f"{from_stage}__to__{to_stage}.md"
+
+
+def create_handoff(project: Path, from_stage: str, to_stage: str, framework_version: str) -> Path:
+    path = handoff_path(project, from_stage, to_stage)
+    path.write_text(
+        f"# Stage Handoff\n\n"
+        f"- From stage: {from_stage}\n"
+        f"- To stage: {to_stage}\n"
+        f"- Framework version: {framework_version}\n"
+        f"- Status: READY\n"
+        f"- Source output: docs/{from_stage}/OUTPUT.md\n"
+        f"- Produced at: {now()}\n\n"
+        f"## Contract\n\n"
+        f"The next stage may start only after this handoff exists and the source stage is PASSED.\n\n"
+        f"## Required input\n\n"
+        f"Read `docs/{from_stage}/OUTPUT.md` as the authoritative output of the previous stage.\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def require_predecessor(project: Path, state: str, stage: str) -> None:
+    idx = ALL_STAGES.index(stage)
+    if idx == 0:
+        return
+    previous = ALL_STAGES[idx - 1]
+    previous_status = get_stage(state, previous)
+    if previous_status != "PASSED":
+        raise SystemExit(f"Cannot start {stage}: predecessor {previous} is {previous_status}, expected PASSED")
+    path = handoff_path(project, previous, stage)
+    if not path.exists():
+        raise SystemExit(f"Cannot start {stage}: required handoff is missing: {path.relative_to(project)}")
+    text = path.read_text(encoding="utf-8")
+    if "- Status: READY" not in text:
+        raise SystemExit(f"Cannot start {stage}: handoff is not READY")
+    ready, reason = output_ready(project, previous)
+    if not ready:
+        raise SystemExit(f"Cannot start {stage}: predecessor output is not ready: {reason}")
+
+
 def event(project: Path, event_type: str, **payload: object) -> Path:
     if event_type not in EVENT_TYPES:
         raise SystemExit(f"Unsupported event type: {event_type}")
     directory = meta_dir(project) / "history" / "events"
     directory.mkdir(parents=True, exist_ok=True)
-    files = sorted(directory.glob("*.json"))
-    number = len(files) + 1
-    record = {"event_id": f"{number:06d}", "event_type": event_type, "timestamp": now(), **payload}
-    path = directory / f"{number:06d}-{event_type.replace('.', '-')}.json"
+    event_id = uuid.uuid4().hex[:12]
+    record = {"event_id": event_id, "event_type": event_type, "timestamp": now(), **payload}
+    path = directory / f"{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}-{event_id}-{event_type.replace('.', '-')}.json"
     path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return path
 
@@ -95,6 +157,7 @@ def transition(project: Path, stage: str, action: str, approved_by: str | None =
     if action == "start":
         if current not in {"NOT_STARTED", "BLOCKED"}:
             raise SystemExit(f"Cannot start {stage} from {current}")
+        require_predecessor(project, state, stage)
         new = "IN_PROGRESS"; event_type = "stage.started"
     elif action == "review":
         if current != "IN_PROGRESS":
@@ -103,12 +166,17 @@ def transition(project: Path, stage: str, action: str, approved_by: str | None =
     elif action == "pass":
         if current != "REVIEW":
             raise SystemExit(f"Cannot pass {stage} from {current}; stage must be in REVIEW")
+        ready, output_reason = output_ready(project, stage)
+        if not ready:
+            raise SystemExit(f"QUALITY_GATE_BLOCKED: {output_reason}")
         if stage in HIGH_IMPACT and not approved_by:
             raise SystemExit(f"HUMAN_APPROVAL_REQUIRED: --approved-by is required for {stage}")
         new = "PASSED"; event_type = "stage.passed"
     elif action == "block":
         if current not in ALLOWED - {"NOT_STARTED"}:
             raise SystemExit(f"Cannot block {stage} from {current}")
+        if not reason or not reason.strip():
+            raise SystemExit(f"BLOCK_REASON_REQUIRED: --reason is required for {stage}")
         new = "BLOCKED"; event_type = "stage.blocked"
     elif action in {"resume", "unblock"}:
         if current != "BLOCKED":
@@ -118,16 +186,28 @@ def transition(project: Path, stage: str, action: str, approved_by: str | None =
         raise SystemExit(f"Unknown action: {action}")
 
     state = set_stage(state, stage, new)
+    if action == "block":
+        state = set_value(state, "blocked_stage", stage)
+        state = set_value(state, "blocked_reason", reason.strip())
+    elif action in {"resume", "unblock"}:
+        state = set_value(state, "blocked_stage", "")
+        state = set_value(state, "blocked_reason", "")
     if action == "pass":
         idx = ALL_STAGES.index(stage)
         next_stage = ALL_STAGES[idx + 1] if idx < len(ALL_STAGES) - 1 else "GLOBAL_AUDIT"
         state = set_value(state, "current_stage", next_stage)
         state = set_value(state, "lifecycle", "REVIEW" if next_stage == "GLOBAL_AUDIT" else "NOT_STARTED")
+        handoff = None
+        if next_stage != "GLOBAL_AUDIT":
+            handoff = create_handoff(project, stage, next_stage, get_value(state, "framework_version"))
     else:
         state = set_value(state, "current_stage", stage)
         state = set_value(state, "lifecycle", new)
+        handoff = None
     save(project, state)
     event(project, event_type, stage=stage, from_status=current, to_status=new, reason=reason)
+    if handoff is not None:
+        event(project, "handoff.recorded", from_stage=stage, to_stage=next_stage, path=str(handoff.relative_to(project)), status="READY")
     if approved_by:
         event(project, "approval.recorded", stage=stage, decision="PASS", approver=approved_by, reason=reason or "Quality gate passed")
         approval = meta_dir(project) / "approval-record.md"
