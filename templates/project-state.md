@@ -1,10 +1,11 @@
 # Project State
 
 framework_version: 1.0.0
-current_stage: NOT_STARTED
+current_stage: idea-selection
 lifecycle: NOT_STARTED
 
 ## Stage status
+- idea-selection: NOT_STARTED
 - 01-vision: NOT_STARTED
 - 02-problem-discovery: NOT_STARTED
 - 03-market-research: NOT_STARTED
