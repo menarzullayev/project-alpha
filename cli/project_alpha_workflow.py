@@ -5,12 +5,14 @@ import json
 import re
 from pathlib import Path
 
+PRE_PIPELINE = "idea-selection"
 STAGES = [
-    "idea-selection", "01-vision", "02-problem-discovery", "03-market-research", "04-prd",
+    "01-vision", "02-problem-discovery", "03-market-research", "04-prd",
     "05-domain-model", "06-architecture", "07-adr", "08-technical-spec",
     "09-development-plan", "10-operations",
 ]
-HIGH_IMPACT = {"idea-selection", "01-vision", "04-prd", "06-architecture", "07-adr", "08-technical-spec", "10-operations"}
+ALL_STAGES = [PRE_PIPELINE, *STAGES]
+HIGH_IMPACT = {PRE_PIPELINE, "01-vision", "04-prd", "06-architecture", "07-adr", "08-technical-spec", "10-operations"}
 ALLOWED = {"NOT_STARTED", "IN_PROGRESS", "REVIEW", "PASSED", "BLOCKED"}
 EVENT_TYPES = {
     "stage.started", "stage.reviewed", "stage.passed", "stage.blocked", "stage.resumed",
@@ -37,8 +39,8 @@ def load(project: Path) -> str:
 
 
 def get_value(state: str, key: str, default: str = "") -> str:
-    m = re.search(rf"^{re.escape(key)}:\s*(.+)$", state, re.MULTILINE)
-    return m.group(1).strip() if m else default
+    match = re.search(rf"^{re.escape(key)}:\s*(.+)$", state, re.MULTILINE)
+    return match.group(1).strip() if match else default
 
 
 def get_stage(state: str, stage: str) -> str:
@@ -61,12 +63,11 @@ def set_stage(state: str, stage: str, status: str) -> str:
 
 def save(project: Path, state: str) -> None:
     state_path(project).write_text(state, encoding="utf-8")
-    stages = {stage: get_stage(state, stage) for stage in STAGES}
     runtime = {
         "framework_version": get_value(state, "framework_version"),
         "current_stage": get_value(state, "current_stage"),
         "lifecycle": get_value(state, "lifecycle"),
-        "stages": stages,
+        "stages": {stage: get_stage(state, stage) for stage in ALL_STAGES},
         "updated_at": now(),
     }
     runtime_path = meta_dir(project) / "state.json"
@@ -87,7 +88,7 @@ def event(project: Path, event_type: str, **payload: object) -> Path:
 
 
 def transition(project: Path, stage: str, action: str, approved_by: str | None = None, reason: str | None = None) -> str:
-    if stage not in STAGES:
+    if stage not in ALL_STAGES:
         raise SystemExit(f"Unknown stage: {stage}")
     state = load(project)
     current = get_stage(state, stage)
@@ -118,8 +119,8 @@ def transition(project: Path, stage: str, action: str, approved_by: str | None =
 
     state = set_stage(state, stage, new)
     if action == "pass":
-        idx = STAGES.index(stage)
-        next_stage = STAGES[idx + 1] if idx < len(STAGES) - 1 else "GLOBAL_AUDIT"
+        idx = ALL_STAGES.index(stage)
+        next_stage = ALL_STAGES[idx + 1] if idx < len(ALL_STAGES) - 1 else "GLOBAL_AUDIT"
         state = set_value(state, "current_stage", next_stage)
         state = set_value(state, "lifecycle", "REVIEW" if next_stage == "GLOBAL_AUDIT" else "NOT_STARTED")
     else:
