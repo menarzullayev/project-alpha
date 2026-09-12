@@ -3,6 +3,8 @@
 framework_version: 1.0.0
 current_stage: idea-selection
 lifecycle: NOT_STARTED
+blocked_stage:
+blocked_reason:
 
 ## Stage status
 - idea-selection: NOT_STARTED
@@ -16,6 +18,12 @@ lifecycle: NOT_STARTED
 - 08-technical-spec: NOT_STARTED
 - 09-development-plan: NOT_STARTED
 - 10-operations: NOT_STARTED
+
+## Workflow invariants
+- Stages execute sequentially.
+- A stage cannot start until its predecessor is PASSED and its handoff is READY.
+- A stage cannot PASS from REVIEW until its OUTPUT.md passes the executable output checks and required human approval is recorded.
+- BLOCKED requires a persisted reason.
 
 ## Pending approvals
 None.
