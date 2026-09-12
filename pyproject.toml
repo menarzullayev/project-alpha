@@ -9,7 +9,7 @@ description = "Documentation OS framework and CLI"
 requires-python = ">=3.10"
 
 [project.scripts]
-project-alpha = "project_alpha.cli:main"
+project-alpha = "project_alpha:main"
 
 [tool.setuptools]
 package-dir = {"" = "cli"}
