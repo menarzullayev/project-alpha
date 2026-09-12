@@ -1,27 +1,103 @@
-# project-alpha
+# Project Alpha — Documentation OS
 
-0-dan production-ready mahsulot qurish uchun hujjatlashtirish 10 bosqichga bo'lingan. Har bir bosqich keyingisi uchun kirish ma'lumoti bo'ladi:
+Project Alpha is a reusable Documentation OS for taking a selected product idea from 0 to production-ready documentation. It is designed to be reused across many independent product repositories with Claude Agent or another compatible agent.
 
+## Workflow
+
+```text
+Idea Intake
+  ↓
+Idea Evaluation
+  ↓
+Idea Selection
+  ↓
+01. Vision
+  ↓
+02. Problem Discovery
+  ↓
+03. Market & Competitor Research
+  ↓
+04. PRD
+  ↓
+05. Domain Model
+  ↓
+06. System Architecture
+  ↓
+07. ADR
+  ↓
+08. Technical Specification
+  ↓
+09. Development Plan
+  ↓
+10. Quality & Operations
+  ↓
+Global Audit
+  ↓
+Production Ready
 ```
-Idea
-  ↓
-1. Vision                     → docs/01-vision/
-  ↓
-2. Problem Discovery          → docs/02-problem-discovery/
-  ↓
-3. Market & Competitor Research → docs/03-market-research/
-  ↓
-4. PRD                        → docs/04-prd/
-  ↓
-5. Domain Model               → docs/05-domain-model/
-  ↓
-6. System Architecture        → docs/06-architecture/
-  ↓
-7. ADR                        → docs/07-adr/
-  ↓
-8. Technical Specification    → docs/08-technical-spec/
-  ↓
-9. Development Plan           → docs/09-development-plan/
-  ↓
-10. Quality & Operations      → docs/10-operations/
+
+Idea Selection is a pre-pipeline gateway, not stage 00.
+
+## Operating model
+
+- Human-in-the-loop with risk-based approval.
+- Workflow-driven agent orchestration with explicit user control commands.
+- Every stage follows `NOT_STARTED → IN_PROGRESS → REVIEW → PASSED`, with `BLOCKED` recovery.
+- Material claims use risk-based evidence: claim, source, date, confidence, and type.
+- Material decisions and human approvals are formally recorded.
+- Cross-stage consistency is checked during the pipeline and again in a final global audit.
+- Validation has three layers: structural, semantic, and AI audit.
+
+## Stage contract
+
+Every stage is intended to contain:
+
+```text
+README.md          # human-facing overview
+STAGE.md           # executable agent contract
+TEMPLATE.md        # output document template
+QUALITY-GATE.md    # pass/block criteria
 ```
+
+## Framework architecture
+
+```text
+AGENTS.md
+  ↓
+Global operating rules
+  ↓
+Stage contracts
+  ↓
+Project config
+  ↓
+Decision / approval records
+```
+
+`AGENTS.md` is the universal agent contract. `CLAUDE.md` contains Claude-specific integration rules.
+
+## Project model
+
+Project Alpha is the framework repository. Each real product lives in its own independent repository and pins a Project Alpha framework version.
+
+The intended distribution model is Git repository + CLI:
+
+```text
+project-alpha init <project>
+project-alpha validate
+project-alpha status
+project-alpha audit
+project-alpha migrate
+```
+
+The CLI is a planned execution layer; the framework contracts are stabilized before introducing machine-readable schemas.
+
+## Validation result
+
+```text
+PASS
+WARN
+BLOCK
+HUMAN_APPROVAL_REQUIRED
+```
+
+See `AGENTS.md` and `CLAUDE.md` for the operating contract.
