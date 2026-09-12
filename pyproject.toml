@@ -10,7 +10,8 @@ requires-python = ">=3.10"
 
 [project.scripts]
 project-alpha = "project_alpha:main"
+project-alpha-workflow = "project_alpha_workflow:main"
 
 [tool.setuptools]
 package-dir = {"" = "cli"}
-py-modules = ["project_alpha"]
+py-modules = ["project_alpha", "project_alpha_workflow"]
