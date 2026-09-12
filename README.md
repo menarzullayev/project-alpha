@@ -5,35 +5,11 @@ Project Alpha is a reusable Documentation OS for taking a selected product idea 
 ## Workflow
 
 ```text
-Idea Intake
-  ↓
-Idea Evaluation
-  ↓
-Idea Selection
-  ↓
-01. Vision
-  ↓
-02. Problem Discovery
-  ↓
-03. Market & Competitor Research
-  ↓
-04. PRD
-  ↓
-05. Domain Model
-  ↓
-06. System Architecture
-  ↓
-07. ADR
-  ↓
-08. Technical Specification
-  ↓
-09. Development Plan
-  ↓
-10. Quality & Operations
-  ↓
-Global Audit
-  ↓
-Production Ready
+Idea Intake → Idea Evaluation → Idea Selection
+                    ↓
+01 Vision → 02 Problem Discovery → 03 Market Research → 04 PRD
+→ 05 Domain Model → 06 Architecture → 07 ADR → 08 Technical Spec
+→ 09 Development Plan → 10 Operations → Global Audit → Production Ready
 ```
 
 Idea Selection is a pre-pipeline gateway, not stage 00.
@@ -50,14 +26,16 @@ Idea Selection is a pre-pipeline gateway, not stage 00.
 
 ## Stage contract
 
-Every stage is intended to contain:
+Every stage contains:
 
 ```text
 README.md          # human-facing overview
-STAGE.md           # executable agent contract
-TEMPLATE.md        # output document template
+STAGE.md           # agent execution contract
+TEMPLATE.md        # output template
 QUALITY-GATE.md    # pass/block criteria
 ```
+
+A product repository initialized by the CLI receives these contracts plus an `OUTPUT.md` working document for every stage.
 
 ## Framework architecture
 
@@ -68,28 +46,58 @@ Global operating rules
   ↓
 Stage contracts
   ↓
-Project config
+Project config + state
   ↓
-Decision / approval records
+Evidence / decisions / approvals
+  ↓
+Validation + lifecycle controls
 ```
 
 `AGENTS.md` is the universal agent contract. `CLAUDE.md` contains Claude-specific integration rules.
 
-## Project model
+## Executable layer
 
-Project Alpha is the framework repository. Each real product lives in its own independent repository and pins a Project Alpha framework version.
+Install locally:
 
-The intended distribution model is Git repository + CLI:
-
-```text
-project-alpha init <project>
-project-alpha validate
-project-alpha status
-project-alpha audit
-project-alpha migrate
+```bash
+python -m pip install -e .
 ```
 
-The CLI is a planned execution layer; the framework contracts are stabilized before introducing machine-readable schemas.
+Initialize a product repository:
+
+```bash
+project-alpha init ../my-product --name "My Product" --idea "One-line idea"
+```
+
+Inspect and validate:
+
+```bash
+project-alpha status
+project-alpha validate
+project-alpha audit
+```
+
+Control stage lifecycle:
+
+```bash
+project-alpha-workflow 01-vision start
+project-alpha-workflow 01-vision review
+project-alpha-workflow 01-vision pass --approved-by "human"
+```
+
+Migrate an existing product repository:
+
+```bash
+project-alpha migrate --to 1.0.0
+```
+
+See `docs/CLI.md` for the complete command reference.
+
+## Versioning
+
+Current framework version: `1.0.0`.
+
+Product repositories pin the framework version. Migrations are explicit and preserve historical outputs; there are no silent rewrites.
 
 ## Validation result
 
