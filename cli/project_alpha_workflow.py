@@ -40,7 +40,7 @@ def load(project: Path) -> str:
 
 
 def get_value(state: str, key: str, default: str = "") -> str:
-    match = re.search(rf"^{re.escape(key)}:\s*(.+)$", state, re.MULTILINE)
+    match = re.search(rf"^{re.escape(key)}:\s*(.*)$", state, re.MULTILINE)
     return match.group(1).strip() if match else default
 
 
@@ -84,6 +84,9 @@ def output_ready(project: Path, stage: str) -> tuple[bool, str]:
     if not output.exists():
         return False, f"missing output: {output.relative_to(project)}"
     text = output.read_text(encoding="utf-8")
+    template = output.with_name("TEMPLATE.md")
+    if template.exists() and text.strip() == template.read_text(encoding="utf-8").strip():
+        return False, f"OUTPUT.md is unchanged from TEMPLATE.md: {output.relative_to(project)}"
     if any(token in text for token in ("TODO", "TBD")) or "<fill" in text.lower():
         return False, f"placeholder content remains in {output.relative_to(project)}"
     return True, "ready"
