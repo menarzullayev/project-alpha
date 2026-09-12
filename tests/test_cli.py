@@ -19,6 +19,13 @@ class ProjectAlphaCLITests(unittest.TestCase):
         self.assertEqual(module.init(args), 0)
         return project
 
+    def pass_idea_selection(self, project: Path) -> None:
+        output = project / "docs" / "idea-selection" / "OUTPUT.md"
+        output.write_text("# Selected Idea\n\nA concrete test product direction.\n", encoding="utf-8")
+        module.transition(project, "idea-selection", "start")
+        module.transition(project, "idea-selection", "review")
+        module.transition(project, "idea-selection", "pass", approved_by="human")
+
     def test_init_creates_layered_runtime_state_and_event_log(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = self.make_project(tmp)
@@ -34,30 +41,56 @@ class ProjectAlphaCLITests(unittest.TestCase):
             project = self.make_project(tmp)
             self.assertEqual(module.validate(project), 0)
 
-    def test_stage_lifecycle_requires_review_and_human_approval(self):
+    def test_stage_order_requires_predecessor_and_handoff(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = self.make_project(tmp)
-            with self.assertRaises(SystemExit):
-                module.transition(project, "01-vision", "pass")
+            with self.assertRaisesRegex(SystemExit, "predecessor idea-selection"):
+                module.transition(project, "01-vision", "start")
+            self.pass_idea_selection(project)
             self.assertEqual(module.transition(project, "01-vision", "start"), "IN_PROGRESS")
-            self.assertEqual(module.transition(project, "01-vision", "review"), "REVIEW")
-            self.assertEqual(module.transition(project, "01-vision", "pass", approved_by="human"), "PASSED")
-            state = module.read_state(project)
-            self.assertEqual(module.state_value(state, "- 01-vision"), "PASSED")
-            self.assertEqual(module.state_value(state, "current_stage"), "02-problem-discovery")
-            events = list((project / ".project-alpha" / "history" / "events").glob("*.json"))
-            self.assertEqual(len(events), 5)
 
-    def test_block_and_resume_are_recorded(self):
+    def test_pass_requires_real_output_and_creates_handoff(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = self.make_project(tmp)
+            self.pass_idea_selection(project)
             module.transition(project, "01-vision", "start")
+            module.transition(project, "01-vision", "review")
+            with self.assertRaisesRegex(SystemExit, "QUALITY_GATE_BLOCKED"):
+                module.transition(project, "01-vision", "pass", approved_by="human")
+            (project / "docs" / "01-vision" / "OUTPUT.md").write_text(
+                "# Vision\n\nMission, vision, goals, principles, assumptions, and open questions.\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(module.transition(project, "01-vision", "pass", approved_by="human"), "PASSED")
+            handoff = project / ".project-alpha" / "handoffs" / "01-vision__to__02-problem-discovery.md"
+            self.assertTrue(handoff.exists())
+            self.assertIn("- Status: READY", handoff.read_text(encoding="utf-8"))
+            self.assertEqual(module.state_value(module.read_state(project), "current_stage"), "02-problem-discovery")
+
+    def test_block_requires_reason_and_persists_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self.make_project(tmp)
+            self.pass_idea_selection(project)
+            module.transition(project, "01-vision", "start")
+            with self.assertRaisesRegex(SystemExit, "BLOCK_REASON_REQUIRED"):
+                module.transition(project, "01-vision", "block")
             self.assertEqual(module.transition(project, "01-vision", "block", reason="missing evidence"), "BLOCKED")
+            state = module.read_state(project)
+            self.assertEqual(module.state_value(state, "blocked_stage"), "01-vision")
+            self.assertEqual(module.state_value(state, "blocked_reason"), "missing evidence")
             self.assertEqual(module.transition(project, "01-vision", "resume"), "IN_PROGRESS")
             state = module.read_state(project)
-            self.assertEqual(module.state_value(state, "- 01-vision"), "IN_PROGRESS")
-            events = list((project / ".project-alpha" / "history" / "events").glob("*.json"))
-            self.assertEqual(len(events), 4)
+            self.assertEqual(module.state_value(state, "blocked_stage"), "")
+            self.assertEqual(module.state_value(state, "blocked_reason"), "")
+
+    def test_event_ids_are_unique(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self.make_project(tmp)
+            self.pass_idea_selection(project)
+            module.transition(project, "01-vision", "start")
+            events = [p.read_text(encoding="utf-8") for p in (project / ".project-alpha" / "history" / "events").glob("*.json")]
+            ids = {line.split('"')[3] for text in events for line in text.splitlines() if '"event_id"' in line}
+            self.assertEqual(len(ids), len(events))
 
 
 if __name__ == "__main__":
