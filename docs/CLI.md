@@ -1,6 +1,6 @@
 # Project Alpha CLI
 
-The CLI is the executable orchestration layer of the Documentation OS. Markdown contracts remain authoritative; the CLI enforces deterministic filesystem, version, state, lifecycle, and event invariants.
+The CLI is the executable orchestration layer of the Documentation OS. Markdown contracts remain authoritative; deterministic validators enforce filesystem, version, state, lifecycle, record, semantic, schema, and audit invariants.
 
 ## Install
 
@@ -14,7 +14,7 @@ python -m pip install -e .
 project-alpha init ../my-product --name "My Product" --repository "github.com/org/my-product" --idea "One-line product idea"
 ```
 
-Initialization creates `.project-alpha/project-state.md`, derived `state.json`, configuration/decision/approval templates, event history, and Idea Selection + stages 01–10 with their contracts and `OUTPUT.md` files.
+Initialization creates `.project-alpha/project-state.md`, derived `state.json`, configuration/templates, event history, and Idea Selection + stages 01–10 with contracts and `OUTPUT.md` files.
 
 ## Inspect and validate
 
@@ -24,6 +24,8 @@ project-alpha validate
 project-alpha validate --structural-only
 project-alpha audit
 ```
+
+`audit` runs the global workflow, machine-readable schema, evidence/decision integrity, and cross-stage semantic checks.
 
 ## Full workflow lifecycle
 
@@ -40,17 +42,17 @@ Transitions are guarded. High-impact stages require explicit human approval. Eac
 ## Formal records
 
 ```bash
-project-alpha decision --stage 01-vision --title "Target user" --decision "B2B teams"
-project-alpha approval --stage 01-vision --approver "human" --decision PASS --reason "Approved"
-project-alpha evidence --stage 03-market-research --claim "Market estimate" --source "source-url" --date 2026-09-12 --confidence high --type FACT
+project-alpha evidence --evidence-id EVID-001 --stage 03-market-research --claim "Market estimate" --source "source-url" --date 2026-09-12 --confidence high --type FACT --risk LOW
+project-alpha decision --decision-id DEC-001 --stage 04-prd --title "Choose X" --decision "Choose X" --context "Context" --chosen-option "X" --rationale "Rationale" --impact Medium --reversibility High --risk MEDIUM --evidence EVID-001 --approval-required yes --approval-status pending
+project-alpha approval --approval-id APR-001 --stage 04-prd --decision-id DEC-001 --status approved --approver human
 project-alpha handoff --from-stage 03-market-research --to-stage 04-prd --reason "Market gate passed"
 ```
 
-These commands record semantic events. They do not silently manufacture evidence, decisions, approvals, or stage outputs.
+These commands create canonical Markdown records and immutable event-history entries. They never fabricate missing evidence or approvals.
 
-## Layered state and history
+## Layered state, schema, and history
 
-`project-state.md` is the human-readable source of truth. `state.json` is derived runtime state. Event records capture workflow semantics separately from Git commits. This permits audit, recovery, and future checkpoint snapshots without making JSON a competing authority.
+`project-state.md` is the human-readable source of truth. `state.json` is a derived machine-readable representation validated against the versioned schema under `schema/1.0.0/`. Event records capture workflow semantics separately from Git commits. Schema validation never silently promotes JSON above Markdown authority.
 
 ## Version migration
 
@@ -60,6 +62,13 @@ project-alpha migrate --to 1.0.0
 
 Migrations are explicit. Historical outputs are preserved and unsupported target versions are blocked.
 
-## Current boundary
+## Validation results
 
-Version 1.0.0 provides the deterministic core: initialization, layered state, lifecycle transitions, event recording, structural/semantic validation, and global audit. A standalone AI audit engine, external-tool adapters, schema layer, and richer migration/checkpoint engine remain subsequent execution layers.
+```text
+PASS
+WARN
+BLOCK
+HUMAN_APPROVAL_REQUIRED
+```
+
+See `AGENTS.md` and `CLAUDE.md` for the agent operating contract.
