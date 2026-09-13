@@ -13,8 +13,7 @@ Project Alpha is an agent-operated Documentation OS. Follow `AGENTS.md` as the c
 - When revisiting a stage, identify downstream documents that may become stale and revalidate them.
 - Treat framework version and migration state as immutable history unless an explicit migration is being performed.
 
-## Executable controls
-The framework ships deterministic CLI controls:
+## Deterministic controls
 
 ```text
 project-alpha init
@@ -25,8 +24,18 @@ project-alpha migrate
 project-alpha-workflow <stage> start|review|pass|block|unblock
 ```
 
-The CLI enforces filesystem, version, lifecycle, and formal approval invariants. Claude remains responsible for semantic work, research, cross-stage reasoning, and AI audit. The CLI must not be treated as a substitute for agent reasoning or human approval.
+The CLI enforces filesystem, version, lifecycle, schema, integrity, recovery, semantic, and formal approval invariants. Claude remains responsible for semantic work, research, cross-stage reasoning, and AI audit.
 
-When Claude needs to revisit a stage, use the workflow controls rather than editing lifecycle state silently. When a stage is blocked, preserve the blocker and re-enter through `unblock` after the dependency is resolved.
+## Canonical records
+
+Use the CLI record commands for evidence, decisions, approvals, and handoffs so canonical Markdown records and immutable event history remain synchronized. Do not hand-edit event history.
+
+## Recovery
+
+If state or runtime representations drift, run the deterministic recovery/global audit. Resolve the underlying cause and re-enter through the supported workflow transition. Never rewrite history to conceal drift.
+
+## AI audit boundary
+
+Claude must perform the reasoning audit described in `docs/AI-AUDIT.md`. A model judgment is not a human approval. Production Ready requires an actual human approval record after all deterministic and AI checks pass.
 
 Do not skip a mandatory quality gate or human approval merely because a command requests progression.
