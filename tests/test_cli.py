@@ -26,6 +26,14 @@ class ProjectAlphaCLITests(unittest.TestCase):
         module.transition(project, "idea-selection", "review")
         module.transition(project, "idea-selection", "pass", approved_by="human")
 
+    def pass_vision(self, project: Path) -> None:
+        self.pass_idea_selection(project)
+        output = project / "docs" / "01-vision" / "OUTPUT.md"
+        output.write_text("# Vision\n\nMission, vision, goals, principles, assumptions, and open questions.\n", encoding="utf-8")
+        module.transition(project, "01-vision", "start")
+        module.transition(project, "01-vision", "review")
+        module.transition(project, "01-vision", "pass", approved_by="human")
+
     def test_init_creates_layered_runtime_state_and_event_log(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = self.make_project(tmp)
@@ -91,6 +99,36 @@ class ProjectAlphaCLITests(unittest.TestCase):
             events = [p.read_text(encoding="utf-8") for p in (project / ".project-alpha" / "history" / "events").glob("*.json")]
             ids = {line.split('"')[3] for text in events for line in text.splitlines() if '"event_id"' in line}
             self.assertEqual(len(ids), len(events))
+
+    def test_global_audit_blocks_incomplete_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self.make_project(tmp)
+            self.assertEqual(module.audit(project), 2)
+            state = module.read_state(project)
+            self.assertEqual(module.state_value(state, "global_audit_status"), "BLOCKED")
+            report = project / ".project-alpha" / "audit" / "global-audit.md"
+            self.assertTrue(report.exists())
+            self.assertIn("idea-selection: status is NOT_STARTED", report.read_text(encoding="utf-8"))
+
+    def test_global_audit_requires_approval_after_all_stages_pass(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self.make_project(tmp)
+            self.pass_vision(project)
+            # Simulate the remaining stages having passed with valid outputs and handoffs.
+            for index, stage in enumerate(module.STAGES[1:], start=1):
+                output = project / "docs" / stage / "OUTPUT.md"
+                output.write_text(f"# {stage}\n\nCompleted stage output.\n", encoding="utf-8")
+                module.transition(project, stage, "start")
+                module.transition(project, stage, "review")
+                module.transition(project, stage, "pass", approved_by="human")
+            self.assertEqual(module.audit(project), 1)
+            state = module.read_state(project)
+            self.assertEqual(module.state_value(state, "global_audit_status"), "READY")
+            self.assertEqual(module.state_value(state, "lifecycle"), "REVIEW")
+            self.assertEqual(module.audit(project, approved_by="cto"), 0)
+            state = module.read_state(project)
+            self.assertEqual(module.state_value(state, "global_audit_status"), "APPROVED")
+            self.assertEqual(module.state_value(state, "lifecycle"), "PRODUCTION_READY")
 
 
 if __name__ == "__main__":
