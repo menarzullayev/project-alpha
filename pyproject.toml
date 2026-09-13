@@ -14,4 +14,4 @@ project-alpha-workflow = "project_alpha_workflow:main"
 
 [tool.setuptools]
 package-dir = {"" = "cli"}
-py-modules = ["project_alpha", "project_alpha_workflow"]
+py-modules = ["project_alpha", "project_alpha_workflow", "project_alpha_audit"]
