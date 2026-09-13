@@ -139,7 +139,7 @@ def validate(project: Path, semantic: bool = True) -> int:
     if evidence.exists():
         for path in evidence.glob("*.md"):
             text = path.read_text(encoding="utf-8")
-            for field in ("CLAIM", "SOURCE", "DATE", "CONFIDENCE", "TYPE"):
+            for field in ("CLAIM", "SOURCE", "DATE", "CONFIDENCE", "TYPE", "RISK"):
                 if f"{field}:" not in text:
                     errors.append(f"evidence record missing {field}: {path.relative_to(project)}")
 
@@ -258,11 +258,25 @@ def main() -> int:
         command.add_argument("--date")
         command.add_argument("--confidence")
         command.add_argument("--type")
+        command.add_argument("--risk")
+        command.add_argument("--evidence-id")
+        command.add_argument("--decision-id")
         command.add_argument("--decision")
+        command.add_argument("--context")
+        command.add_argument("--chosen-option", dest="chosen_option")
+        command.add_argument("--rationale")
+        command.add_argument("--impact")
+        command.add_argument("--reversibility")
+        command.add_argument("--evidence")
+        command.add_argument("--approval-required", dest="approval_required")
+        command.add_argument("--approval-status", dest="approval_status")
+        command.add_argument("--approval-id", dest="approval_id")
         command.add_argument("--approver")
-        command.add_argument("--reason")
+        command.add_argument("--approved-at", dest="approved_at")
+        command.add_argument("--status")
         command.add_argument("--from-stage")
         command.add_argument("--to-stage")
+        command.add_argument("--reason")
         command.set_defaults(kind=kind, func=add_record)
 
     args = parser.parse_args()

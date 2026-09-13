@@ -40,7 +40,7 @@ def load(project: Path) -> str:
 
 
 def get_value(state: str, key: str, default: str = "") -> str:
-    match = re.search(rf"^{re.escape(key)}:\s*(.*)$", state, re.MULTILINE)
+    match = re.search(rf"^{re.escape(key)}:[ \t]*([^\r\n]*)$", state, re.MULTILINE)
     return match.group(1).strip() if match else default
 
 
@@ -49,14 +49,14 @@ def get_stage(state: str, stage: str) -> str:
 
 
 def set_value(state: str, key: str, value: str) -> str:
-    pattern = rf"^{re.escape(key)}:\s*.*$"
+    pattern = rf"^{re.escape(key)}:[^\r\n]*$"
     if re.search(pattern, state, re.MULTILINE):
         return re.sub(pattern, f"{key}: {value}", state, count=1, flags=re.MULTILINE)
     return state.rstrip() + f"\n{key}: {value}\n"
 
 
 def set_stage(state: str, stage: str, status: str) -> str:
-    pattern = rf"^- {re.escape(stage)}:\s*.*$"
+    pattern = rf"^- {re.escape(stage)}:[^\r\n]*$"
     if not re.search(pattern, state, re.MULTILINE):
         raise SystemExit(f"Stage is not defined in project state: {stage}")
     return re.sub(pattern, f"- {stage}: {status}", state, count=1, flags=re.MULTILINE)
@@ -68,11 +68,11 @@ def save(project: Path, state: str) -> None:
         "framework_version": get_value(state, "framework_version"),
         "current_stage": get_value(state, "current_stage"),
         "lifecycle": get_value(state, "lifecycle"),
+        "global_audit_status": get_value(state, "global_audit_status", "NOT_RUN"),
         "stages": {stage: get_stage(state, stage) for stage in ALL_STAGES},
         "updated_at": now(),
     }
-    runtime_path = meta_dir(project) / "state.json"
-    runtime_path.write_text(json.dumps(runtime, indent=2) + "\n", encoding="utf-8")
+    (meta_dir(project) / "state.json").write_text(json.dumps(runtime, indent=2) + "\n", encoding="utf-8")
 
 
 def stage_output(project: Path, stage: str) -> Path:
@@ -102,8 +102,11 @@ def handoff_path(project: Path, from_stage: str, to_stage: str) -> Path:
     return handoff_dir(project) / f"{from_stage}__to__{to_stage}.md"
 
 
-def create_handoff(project: Path, from_stage: str, to_stage: str, framework_version: str) -> Path:
+def create_handoff(project: Path, from_stage: str, to_stage: str, framework_version: str, reason: str | None = None) -> Path:
+    if from_stage not in ALL_STAGES or to_stage not in ALL_STAGES:
+        raise SystemExit("Invalid handoff stage")
     path = handoff_path(project, from_stage, to_stage)
+    reason_text = reason.strip() if reason and reason.strip() else "Predecessor quality gate passed"
     path.write_text(
         f"# Stage Handoff\n\n"
         f"- From stage: {from_stage}\n"
@@ -111,7 +114,8 @@ def create_handoff(project: Path, from_stage: str, to_stage: str, framework_vers
         f"- Framework version: {framework_version}\n"
         f"- Status: READY\n"
         f"- Source output: docs/{from_stage}/OUTPUT.md\n"
-        f"- Produced at: {now()}\n\n"
+        f"- Produced at: {now()}\n"
+        f"- Reason: {reason_text}\n\n"
         f"## Contract\n\n"
         f"The next stage may start only after this handoff exists and the source stage is PASSED.\n\n"
         f"## Required input\n\n"
@@ -150,6 +154,32 @@ def event(project: Path, event_type: str, **payload: object) -> Path:
     path = directory / f"{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}-{event_id}-{event_type.replace('.', '-')}.json"
     path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return path
+
+
+def _safe_id(value: object, prefix: str) -> str:
+    raw = str(value or "").strip()
+    if raw:
+        return raw
+    return f"{prefix}-{uuid.uuid4().hex[:10].upper()}"
+
+
+def _write_record(project: Path, directory: Path, record_id: str, title: str, fields: list[tuple[str, object]]) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"{record_id}.md"
+    if path.exists():
+        raise SystemExit(f"Record already exists: {path.relative_to(project)}")
+    lines = [f"# {title}", "", f"- {title.split()[0]} ID: {record_id}"]
+    for name, value in fields:
+        if value is not None and str(value).strip() != "":
+            lines.append(f"- {name}: {value}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def _required(payload: dict[str, object], names: tuple[str, ...]) -> None:
+    missing = [name for name in names if not str(payload.get(name, "")).strip()]
+    if missing:
+        raise SystemExit("REQUIRED_FIELDS: " + ", ".join(missing))
 
 
 def transition(project: Path, stage: str, action: str, approved_by: str | None = None, reason: str | None = None) -> str:
@@ -202,7 +232,7 @@ def transition(project: Path, stage: str, action: str, approved_by: str | None =
         state = set_value(state, "lifecycle", "REVIEW" if next_stage == "GLOBAL_AUDIT" else "NOT_STARTED")
         handoff = None
         if next_stage != "GLOBAL_AUDIT":
-            handoff = create_handoff(project, stage, next_stage, get_value(state, "framework_version"))
+            handoff = create_handoff(project, stage, next_stage, get_value(state, "framework_version"), reason)
     else:
         state = set_value(state, "current_stage", stage)
         state = set_value(state, "lifecycle", new)
@@ -223,4 +253,41 @@ def record(project: Path, kind: str, payload: dict[str, object]) -> Path:
     mapping = {"decision": "decision.recorded", "approval": "approval.recorded", "evidence": "evidence.recorded", "handoff": "handoff.recorded"}
     if kind not in mapping:
         raise SystemExit(f"Unknown record kind: {kind}")
-    return event(project, mapping[kind], **payload)
+
+    if kind == "evidence":
+        _required(payload, ("claim", "source", "date", "confidence", "type", "risk"))
+        evidence_id = _safe_id(payload.get("evidence_id"), "EVID")
+        path = _write_record(project, project / "docs" / "evidence", evidence_id, "Evidence Record", [
+            ("CLAIM", payload.get("claim")), ("SOURCE", payload.get("source")), ("DATE", payload.get("date")),
+            ("CONFIDENCE", str(payload.get("confidence", "")).upper()), ("TYPE", str(payload.get("type", "")).upper()),
+            ("RISK", str(payload.get("risk", "")).upper()), ("Stage", payload.get("stage")),
+        ])
+    elif kind == "decision":
+        _required(payload, ("stage", "title", "decision", "context", "chosen_option", "rationale", "impact", "reversibility", "risk", "evidence", "approval_required", "approval_status"))
+        decision_id = _safe_id(payload.get("decision_id"), "DEC")
+        path = _write_record(project, meta_dir(project) / "decisions", decision_id, "Decision Record", [
+            ("Stage", payload.get("stage")), ("Title", payload.get("title")), ("Decision", payload.get("decision")),
+            ("Context", payload.get("context")), ("Chosen option", payload.get("chosen_option")), ("Rationale", payload.get("rationale")),
+            ("Impact", payload.get("impact")), ("Reversibility", payload.get("reversibility")), ("Risk", str(payload.get("risk", "")).upper()),
+            ("Evidence", payload.get("evidence")), ("Approval required", str(payload.get("approval_required", "")).lower()),
+            ("Approval status", str(payload.get("approval_status", "")).lower()), ("Approval ID", payload.get("approval_id")),
+        ])
+    elif kind == "approval":
+        _required(payload, ("stage", "decision_id", "status"))
+        approval_id = _safe_id(payload.get("approval_id"), "APR")
+        status = str(payload.get("status", "")).lower()
+        if status == "approved":
+            _required(payload, ("approver",))
+        path = _write_record(project, meta_dir(project) / "approvals", approval_id, "Approval Record", [
+            ("Stage", payload.get("stage")), ("Decision", payload.get("decision")), ("Status", status),
+            ("Decision ID", payload.get("decision_id")), ("Evidence", payload.get("evidence")),
+            ("Approver", payload.get("approver")), ("Approved at", payload.get("approved_at") or (now() if status == "approved" else None)),
+        ])
+    else:
+        if payload.get("from_stage") and payload.get("to_stage"):
+            path = create_handoff(project, str(payload["from_stage"]), str(payload["to_stage"]), str(payload.get("framework_version", "1.0.0")), str(payload.get("reason", "")))
+        else:
+            return event(project, mapping[kind], **payload)
+
+    event(project, mapping[kind], path=str(path.relative_to(project)), **payload)
+    return path
