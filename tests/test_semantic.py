@@ -61,10 +61,10 @@ class SemanticAuditTests(unittest.TestCase):
     def test_unknown_reference_is_warning(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = self.make_project(tmp)
-            self.write_output(project, "02-problem-discovery", "PROB-UNKNOWN\n")
+            self.write_output(project, "04-prd", "EVID-UNKNOWN\n")
             code, status, findings = run_semantic_audit(project)
             self.assertEqual((code, status), (0, "PASS"))
-            self.assertTrue(any("unknown semantic reference PROB-UNKNOWN" in item for item in findings))
+            self.assertTrue(any("unknown semantic reference EVID-UNKNOWN" in item for item in findings))
 
 
 if __name__ == "__main__":
