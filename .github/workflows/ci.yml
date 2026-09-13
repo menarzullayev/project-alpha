@@ -15,5 +15,6 @@ jobs:
       - run: python -m pip install -e .
       - run: python -m unittest discover -s tests -p 'test_*.py'
       - run: python -m py_compile cli/project_alpha.py cli/project_alpha_workflow.py cli/project_alpha_audit.py cli/project_alpha_integrity.py cli/project_alpha_semantic.py cli/project_alpha_schema.py cli/project_alpha_recovery.py
+      - run: python scripts/release_check.py
       - run: python -m pip install build
       - run: python -m build --wheel --sdist
