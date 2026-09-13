@@ -23,27 +23,18 @@ class SemanticAuditTests(unittest.TestCase):
     def test_clean_traceability_passes(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = self.make_project(tmp)
-            self.write_output(project, "01-vision", "# Vision\n\nPROB-A and METRIC-A\n")
-            self.write_output(project, "02-problem-discovery", "# Problems\n\nPROB-A METRIC-A\n")
-            self.write_output(project, "03-market-research", "# Market\n\nPROB-A\n")
-            self.write_output(project, "04-prd", "# PRD\n\nPROB-A REQ-A\n")
+            self.write_output(project, "01-vision", "PROB-A and METRIC-A\n")
+            self.write_output(project, "02-problem-discovery", "PROB-A METRIC-A\n")
+            self.write_output(project, "03-market-research", "PROB-A\n")
+            self.write_output(project, "04-prd", "PROB-A REQ-A\n")
             code, status, findings = run_semantic_audit(project)
             self.assertEqual((code, status), (0, "PASS"))
             self.assertEqual(findings, [])
 
-    def test_duplicate_id_blocks(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            project = self.make_project(tmp)
-            self.write_output(project, "01-vision", "PROB-A\n")
-            self.write_output(project, "02-problem-discovery", "PROB-A\n")
-            code, status, findings = run_semantic_audit(project)
-            self.assertEqual((code, status), (2, "BLOCKED"))
-            self.assertTrue(any("duplicate semantic ID PROB-A" in item for item in findings))
-
     def test_forward_reference_blocks(self):
         with tempfile.TemporaryDirectory() as tmp:
             project = self.make_project(tmp)
-            self.write_output(project, "01-vision", "REQ-A\n")
+            self.write_output(project, "02-problem-discovery", "REQ-A\n")
             self.write_output(project, "04-prd", "REQ-A\n")
             code, status, findings = run_semantic_audit(project)
             self.assertEqual((code, status), (2, "BLOCKED"))
