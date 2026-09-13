@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"project-alpha/1.0.0/record","title":"Project Alpha Canonical Record","type":"object","description":"Canonical Markdown record family; Markdown remains authoritative."}
