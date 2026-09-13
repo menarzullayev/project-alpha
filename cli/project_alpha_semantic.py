@@ -52,6 +52,7 @@ def _docs(project: Path) -> list[tuple[str, Path, str]]:
 def run_semantic_audit(project: Path) -> tuple[int, str, list[str]]:
     docs = _docs(project)
     refs_by_stage = {stage: _ids(text) for stage, _, text in docs}
+    paths_by_stage = {stage: path for stage, path, _ in docs}
     definitions: dict[str, list[tuple[str, Path]]] = {}
     findings: list[str] = []
     stage_index = {stage: index for index, stage in enumerate(ALL_STAGES)}
@@ -67,7 +68,8 @@ def run_semantic_audit(project: Path) -> tuple[int, str, list[str]]:
             paths = " and ".join(str(path.relative_to(project)) for _, path in owners)
             findings.append(f"duplicate semantic ID {value}: {paths}")
 
-    for stage, path, refs in refs_by_stage.items():
+    for stage, refs in refs_by_stage.items():
+        path = paths_by_stage[stage]
         for kind, values in refs.items():
             owner_stage = OWNER_STAGE.get(kind)
             for value in sorted(values):
@@ -95,7 +97,8 @@ def run_semantic_audit(project: Path) -> tuple[int, str, list[str]]:
     blocked_prefixes = ("duplicate", "forward reference", "traceability violation")
     status = "BLOCKED" if any(item.startswith(blocked_prefixes) for item in findings) else "PASS"
     code = 2 if status == "BLOCKED" else 0
-    lines = ["# Cross-Stage Semantic Consistency Audit", "", f"- Status: {status}", f"- Semantic IDs: {sum(len(v) for v in refs_by_stage.values() for v in v.values())}", "", "## Findings"]
+    count = sum(len(values) for refs in refs_by_stage.values() for values in refs.values())
+    lines = ["# Cross-Stage Semantic Consistency Audit", "", f"- Status: {status}", f"- Semantic IDs: {count}", "", "## Findings"]
     lines.extend(f"- {item}" for item in findings) if findings else lines.append("- None")
     report.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return code, status, findings
