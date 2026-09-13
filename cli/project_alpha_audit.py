@@ -1,86 +1,35 @@
 from __future__ import annotations
-
 from pathlib import Path
-
-from project_alpha_workflow import ALL_STAGES, handoff_path, output_ready
-from project_alpha import VERSION, read_state, state_value, set_state_value, meta_dir, sync_runtime_state, now
+from project_alpha_workflow import ALL_STAGES,handoff_path,output_ready
+from project_alpha import VERSION,read_state,state_value,set_state_value,meta_dir,sync_runtime_state,now
 from project_alpha_integrity import run_integrity_audit
 from project_alpha_semantic import run_semantic_audit
+from project_alpha_schema import run_schema_audit
 
-AUDIT_STATUSES = {"NOT_RUN", "READY", "BLOCKED", "APPROVED"}
-
-
-def run_global_audit(project: Path, approved_by: str | None = None) -> tuple[int, str]:
-    state = read_state(project)
-    findings: list[str] = []
-    framework = state_value(state, "framework_version")
-    if framework != VERSION:
-        findings.append(f"framework_version mismatch: {framework} != {VERSION}")
-    if state_value(state, "blocked_stage") or state_value(state, "blocked_reason"):
-        findings.append("project contains an active blocker")
-
-    for index, stage in enumerate(ALL_STAGES):
-        status = state_value(state, f"- {stage}", "NOT_STARTED")
-        if status != "PASSED":
-            findings.append(f"{stage}: status is {status}, expected PASSED")
-        ready, reason = output_ready(project, stage)
-        if not ready:
-            findings.append(f"{stage}: {reason}")
-        if index < len(ALL_STAGES) - 1:
-            next_stage = ALL_STAGES[index + 1]
-            handoff = handoff_path(project, stage, next_stage)
-            if not handoff.exists():
-                findings.append(f"missing handoff: {handoff.relative_to(project)}")
-            elif "- Status: READY" not in handoff.read_text(encoding="utf-8"):
-                findings.append(f"handoff is not READY: {handoff.relative_to(project)}")
-
-    integrity_code, integrity_status, integrity_findings = run_integrity_audit(project)
-    if integrity_code:
-        findings.extend(f"integrity: {item}" for item in integrity_findings)
-
-    semantic_code, semantic_status, semantic_findings = run_semantic_audit(project)
-    if semantic_code:
-        findings.extend(f"semantic: {item}" for item in semantic_findings)
-
-    audit_dir = meta_dir(project) / "audit"
-    audit_dir.mkdir(parents=True, exist_ok=True)
-    report = audit_dir / "global-audit.md"
-
-    if findings:
-        status = "BLOCKED"
-        exit_code = 2
-    elif not approved_by:
-        status = "READY"
-        exit_code = 1
-    else:
-        status = "APPROVED"
-        exit_code = 0
-
-    state = set_state_value(state, "global_audit_status", status)
-    state = set_state_value(state, "current_stage", "GLOBAL_AUDIT")
-    state = set_state_value(state, "lifecycle", "PRODUCTION_READY" if status == "APPROVED" else ("BLOCKED" if status == "BLOCKED" else "REVIEW"))
-    (meta_dir(project) / "project-state.md").write_text(state, encoding="utf-8")
-    sync_runtime_state(project, state)
-
-    lines = [
-        "# Global Audit",
-        "",
-        f"- Framework version: {framework}",
-        f"- Executed at: {now()}",
-        f"- Status: {status}",
-        f"- Integrity audit: {integrity_status}",
-        f"- Semantic audit: {semantic_status}",
-    ]
-    if approved_by:
-        lines += [f"- Approver: {approved_by}"]
-    lines += ["", "## Findings"]
-    lines += [f"- BLOCK: {item}" for item in findings] if findings else ["- None"]
-    lines += ["", "## Gate"]
-    if status == "READY":
-        lines.append("Global consistency, semantic, and integrity checks passed. Explicit human approval is required before Production Ready.")
-    elif status == "APPROVED":
-        lines.append("Global consistency, semantic, and integrity checks passed and human approval was recorded. Project is Production Ready.")
-    else:
-        lines.append("Resolve all findings and rerun the global audit.")
-    report.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return exit_code, status
+def run_global_audit(project:Path,approved_by:str|None=None):
+ state=read_state(project); findings=[]; framework=state_value(state,"framework_version")
+ if framework!=VERSION: findings.append(f"framework_version mismatch: {framework} != {VERSION}")
+ if state_value(state,"blocked_stage") or state_value(state,"blocked_reason"): findings.append("project contains an active blocker")
+ for i,stage in enumerate(ALL_STAGES):
+  status=state_value(state,f"- {stage}","NOT_STARTED")
+  if status!="PASSED": findings.append(f"{stage}: status is {status}, expected PASSED")
+  ready,reason=output_ready(project,stage)
+  if not ready: findings.append(f"{stage}: {reason}")
+  if i<len(ALL_STAGES)-1:
+   h=handoff_path(project,stage,ALL_STAGES[i+1])
+   if not h.exists(): findings.append(f"missing handoff: {h.relative_to(project)}")
+   elif "- Status: READY" not in h.read_text(encoding="utf-8"): findings.append(f"handoff is not READY: {h.relative_to(project)}")
+ schema_code,schema_status,schema_findings=run_schema_audit(project)
+ if schema_code: findings.extend(f"schema: {x}" for x in schema_findings)
+ integrity_code,integrity_status,integrity_findings=run_integrity_audit(project)
+ if integrity_code: findings.extend(f"integrity: {x}" for x in integrity_findings)
+ semantic_code,semantic_status,semantic_findings=run_semantic_audit(project)
+ if semantic_code: findings.extend(f"semantic: {x}" for x in semantic_findings)
+ audit_dir=meta_dir(project)/"audit"; audit_dir.mkdir(parents=True,exist_ok=True)
+ status,code=("BLOCKED",2) if findings else (("READY",1) if not approved_by else ("APPROVED",0))
+ state=set_state_value(state,"global_audit_status",status); state=set_state_value(state,"current_stage","GLOBAL_AUDIT"); state=set_state_value(state,"lifecycle","PRODUCTION_READY" if status=="APPROVED" else ("BLOCKED" if status=="BLOCKED" else "REVIEW")); (meta_dir(project)/"project-state.md").write_text(state,encoding="utf-8"); sync_runtime_state(project,state)
+ lines=["# Global Audit","",f"- Framework version: {framework}",f"- Executed at: {now()}",f"- Status: {status}",f"- Schema audit: {schema_status}",f"- Integrity audit: {integrity_status}",f"- Semantic audit: {semantic_status}",""]
+ if approved_by: lines.append(f"- Approver: {approved_by}")
+ lines += ["## Findings"] + ([f"- BLOCK: {x}" for x in findings] if findings else ["- None"])+["","## Gate"]
+ lines.append("Global checks passed and human approval is recorded; project is Production Ready." if status=="APPROVED" else "Global checks passed; explicit human approval is required before Production Ready." if status=="READY" else "Resolve all findings and rerun the global audit.")
+ (audit_dir/"global-audit.md").write_text("\n".join(lines)+"\n",encoding="utf-8"); return code,status
