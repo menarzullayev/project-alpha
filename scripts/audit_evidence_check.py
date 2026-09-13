@@ -44,6 +44,7 @@ def check_doc(rel, errors):
     rows = 0
     verified = 0
     columns = None
+    width = None
 
     for line in doc.read_text(encoding="utf-8").splitlines():
         if not line.startswith("|"):
@@ -55,13 +56,13 @@ def check_doc(rel, errors):
             lowered = [cell.lower() for cell in cells]
             if STATUS_HEADER in lowered and EVIDENCE_HEADER in lowered:
                 columns = (lowered.index(STATUS_HEADER), lowered.index(EVIDENCE_HEADER))
+                width = len(cells)
             continue
 
         rows += 1
-        if max(columns) >= len(cells):
+        if len(cells) != width:
             errors.append(
-                f"{rel}: row has {len(cells)} cells, expected at least "
-                f"{max(columns) + 1}: {line.strip()}"
+                f"{rel}: row has {len(cells)} cells, expected {width}: {line.strip()}"
             )
             continue
 
