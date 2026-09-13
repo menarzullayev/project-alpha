@@ -1,6 +1,6 @@
 # Production Approval Record
 
-Status: **PENDING — no human production approval has been granted.**
+Status: **APPROVED — production approval granted by a human approver on 2026-09-13.**
 
 ## What is already verified
 
@@ -16,16 +16,15 @@ approval.
 
 ## Approval entry
 
-One entry per approval. Replace the placeholders and commit.
-
 ```text
-approver:    <human name>
-role:        <role>
-date:        <YYYY-MM-DD>
-commit:      <40-char commit SHA approved>
+approver:    Saidakbar Narzullayev
+role:        Repo owner / maintainer
+date:        2026-09-13
+commit:      1e8fa70c3bc9dce51c9ebd8962f047d85531db7f
 scope:       technical completion of the Project Alpha framework
-decision:    APPROVED | REJECTED
-notes:       <free text>
+decision:    APPROVED
+notes:       Verified against repository artifacts and remote CI. The approved commit is
+             pinned by the annotated tag v1.0.0-production.
 ```
 
 ## Current gate status
@@ -38,7 +37,14 @@ notes:       <free text>
 | `scripts/audit_evidence_check.py` | PASS — 36 rows, 36 verified |
 | Wheel and source distribution build | PASS |
 | Global audit reaches `READY` | PASS (acceptance fixture, `tests/test_e2e.py`) |
-| Human production approval | **PENDING** |
+| Human production approval | **APPROVED** — 2026-09-13, Saidakbar Narzullayev |
 
-Until the approval entry above is filled in by a human, this framework is at technical
-completion only and must not be described as production ready.
+The approved commit is `1e8fa70c3bc9dce51c9ebd8962f047d85531db7f`, pinned by the annotated tag
+`v1.0.0-production`. This approval record is committed after that SHA, so the approved commit
+itself remains immutable.
+
+## Approval scope
+
+This approval covers the **framework** at the pinned commit. It does not transfer to product
+repositories built on it: each product project still requires its own substantive stage
+outputs, evidence, decisions, and human approval.
