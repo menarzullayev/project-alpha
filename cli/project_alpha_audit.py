@@ -4,6 +4,7 @@ from pathlib import Path
 
 from project_alpha_workflow import ALL_STAGES, handoff_path, output_ready
 from project_alpha import VERSION, read_state, state_value, set_state_value, meta_dir, sync_runtime_state, now
+from project_alpha_integrity import run_integrity_audit
 
 AUDIT_STATUSES = {"NOT_RUN", "READY", "BLOCKED", "APPROVED"}
 
@@ -32,6 +33,10 @@ def run_global_audit(project: Path, approved_by: str | None = None) -> tuple[int
             elif "- Status: READY" not in handoff.read_text(encoding="utf-8"):
                 findings.append(f"handoff is not READY: {handoff.relative_to(project)}")
 
+    integrity_code, integrity_status, integrity_findings = run_integrity_audit(project)
+    if integrity_code:
+        findings.extend(f"integrity: {item}" for item in integrity_findings)
+
     audit_dir = meta_dir(project) / "audit"
     audit_dir.mkdir(parents=True, exist_ok=True)
     report = audit_dir / "global-audit.md"
@@ -58,6 +63,7 @@ def run_global_audit(project: Path, approved_by: str | None = None) -> tuple[int
         f"- Framework version: {framework}",
         f"- Executed at: {now()}",
         f"- Status: {status}",
+        f"- Integrity audit: {integrity_status}",
     ]
     if approved_by:
         lines += [f"- Approver: {approved_by}"]
@@ -65,9 +71,9 @@ def run_global_audit(project: Path, approved_by: str | None = None) -> tuple[int
     lines += [f"- BLOCK: {item}" for item in findings] if findings else ["- None"]
     lines += ["", "## Gate"]
     if status == "READY":
-        lines.append("Global consistency checks passed. Explicit human approval is required before Production Ready.")
+        lines.append("Global consistency and integrity checks passed. Explicit human approval is required before Production Ready.")
     elif status == "APPROVED":
-        lines.append("Global consistency checks passed and human approval was recorded. Project is Production Ready.")
+        lines.append("Global consistency and integrity checks passed and human approval was recorded. Project is Production Ready.")
     else:
         lines.append("Resolve all findings and rerun the global audit.")
     report.write_text("\n".join(lines) + "\n", encoding="utf-8")
