@@ -8,6 +8,10 @@ Project Alpha versions are pinned by consuming product repositories.
 - Migrations must identify affected files, automatic changes, manual review requirements, and rollback considerations.
 - High-impact semantic migrations require human approval.
 
+## Current schema
+
+Framework `1.0.0` includes the versioned machine-readable schema under `schema/1.0.0/`. This is an execution representation only; Markdown remains authoritative.
+
 ## Migration format
 
 ```text
@@ -20,4 +24,4 @@ Approval required:
 Rollback:
 ```
 
-No migrations are defined yet; the framework is initially versioned at 1.0.0.
+No framework-version migration is required for the schema layer because it is additive within `1.0.0`.
