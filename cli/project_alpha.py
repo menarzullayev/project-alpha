@@ -13,7 +13,7 @@ except ImportError:
     from .project_alpha_workflow import ALL_STAGES, PRE_PIPELINE, STAGES, record, transition
 
 VERSION = "1.0.0"
-LIFECYCLE = {"NOT_STARTED", "IN_PROGRESS", "REVIEW", "PASSED", "BLOCKED"}
+LIFECYCLE = {"NOT_STARTED", "IN_PROGRESS", "REVIEW", "PASSED", "BLOCKED", "PRODUCTION_READY"}
 
 
 def framework_root() -> Path:
@@ -56,6 +56,7 @@ def sync_runtime_state(project: Path, state: str) -> None:
         "framework_version": state_value(state, "framework_version", VERSION),
         "current_stage": state_value(state, "current_stage"),
         "lifecycle": state_value(state, "lifecycle"),
+        "global_audit_status": state_value(state, "global_audit_status", "NOT_RUN"),
         "stages": {stage: state_value(state, f"- {stage}", "NOT_STARTED") for stage in ALL_STAGES},
         "updated_at": now(),
     }
@@ -160,28 +161,18 @@ def status(project: Path) -> int:
     print(f"Framework: {state_value(state, 'framework_version')}")
     print(f"Current stage: {state_value(state, 'current_stage')}")
     print(f"Lifecycle: {state_value(state, 'lifecycle')}")
+    print(f"Global audit: {state_value(state, 'global_audit_status', 'NOT_RUN')}")
     print("Stages:")
     for stage in ALL_STAGES:
         print(f"  {stage}: {state_value(state, f'- {stage}', 'NOT_STARTED')}")
     return 0
 
 
-def audit(project: Path) -> int:
-    code = validate(project, semantic=True)
-    if code == 2:
-        record(project, "handoff", {"action": "global.audit", "result": "BLOCK"})
-        print("Global audit: BLOCK")
-        return 2
-    state = read_state(project)
-    unpassed = [stage for stage in ALL_STAGES if state_value(state, f"- {stage}", "NOT_STARTED") != "PASSED"]
-    result = "HUMAN_APPROVAL_REQUIRED" if unpassed else "PASS"
-    record(project, "handoff", {"action": "global.audit", "result": result, "unpassed_stages": unpassed})
-    if unpassed:
-        print("Global audit: HUMAN_APPROVAL_REQUIRED")
-        print("Unpassed stages: " + ", ".join(unpassed))
-        return 1
-    print("Global audit: PASS")
-    return 0
+def audit(project: Path, approved_by: str | None = None) -> int:
+    from project_alpha_audit import run_global_audit
+    code, result = run_global_audit(project, approved_by)
+    print(f"Global audit: {result}")
+    return code
 
 
 def migrate(args: argparse.Namespace) -> int:
@@ -235,10 +226,14 @@ def main() -> int:
     validate_parser.add_argument("--structural-only", action="store_true")
     validate_parser.set_defaults(func=lambda args: validate(Path(args.path).resolve(), not args.structural_only))
 
-    for name, function in (("status", status), ("audit", audit)):
-        command = sub.add_parser(name)
-        command.add_argument("path", nargs="?", default=".")
-        command.set_defaults(func=lambda args, f=function: f(Path(args.path).resolve()))
+    status_parser = sub.add_parser("status")
+    status_parser.add_argument("path", nargs="?", default=".")
+    status_parser.set_defaults(func=lambda args: status(Path(args.path).resolve()))
+
+    audit_parser = sub.add_parser("audit")
+    audit_parser.add_argument("path", nargs="?", default=".")
+    audit_parser.add_argument("--approved-by")
+    audit_parser.set_defaults(func=lambda args: audit(Path(args.path).resolve(), args.approved_by))
 
     migrate_parser = sub.add_parser("migrate")
     migrate_parser.add_argument("path", nargs="?", default=".")
