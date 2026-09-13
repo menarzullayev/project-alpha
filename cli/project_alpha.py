@@ -40,12 +40,12 @@ def read_state(project: Path) -> str:
 
 
 def state_value(state: str, key: str, default: str = "") -> str:
-    match = re.search(rf"^{re.escape(key)}:\s*(.+)$", state, re.MULTILINE)
+    match = re.search(rf"^{re.escape(key)}:[ \t]*([^\r\n]*)$", state, re.MULTILINE)
     return match.group(1).strip() if match else default
 
 
 def set_state_value(state: str, key: str, value: str) -> str:
-    pattern = rf"^{re.escape(key)}:\s*.*$"
+    pattern = rf"^{re.escape(key)}:[^\r\n]*$"
     if re.search(pattern, state, re.MULTILINE):
         return re.sub(pattern, f"{key}: {value}", state, count=1, flags=re.MULTILINE)
     return state.rstrip() + f"\n{key}: {value}\n"
