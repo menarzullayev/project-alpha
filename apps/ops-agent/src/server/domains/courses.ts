@@ -75,7 +75,8 @@ export async function listSlots(
   const rows = await db
     .select({
       slot: courseSlots,
-      booked: sql<number>`(select count(*)::int from ${bookings} b where b.slot_id = ${courseSlots.id} and b.status in ('pending','confirmed'))`,
+      // Fully qualified: drizzle renders a bare "id" here, which Postgres would bind to b.id.
+      booked: sql<number>`(select count(*)::int from ${bookings} b where b.slot_id = ops_agent.course_slots.id and b.status in ('pending','confirmed'))`,
     })
     .from(courseSlots)
     .where(and(...filters))

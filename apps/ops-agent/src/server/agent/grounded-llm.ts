@@ -22,14 +22,17 @@ export function buildFacts(input: AgentInput, lang: Lang): string {
   return lines.join("\n");
 }
 
-function digitsIn(text: string): string[] {
-  return (text.match(/\d[\d\s.,:]*\d|\d/g) ?? []).map((d) => d.replace(/[\s.,:]/g, ""));
+/** Whole numeric tokens: times stay intact ("15:00"), thousands separators are removed ("450 000" → "450000"). */
+function numbersIn(text: string): string[] {
+  return (text.match(/\d{1,2}:\d{2}|\d{1,3}(?:[ \u00a0.,]\d{3})+(?!\d)|\d+/g) ?? []).map((d) => (d.includes(":") ? d : d.replace(/[\s\u00a0.,]/g, "")));
 }
 
+/** Every number and URL in the answer must appear, as a whole, in the facts. */
 export function passesGroundingGuard(answer: string, facts: string): boolean {
-  const factDigits = facts.replace(/[\s.,:]/g, "");
-  if (/https?:\/\//i.test(answer) && !answer.match(/https?:\/\/\S+/g)!.every((u) => facts.includes(u))) return false;
-  return digitsIn(answer).every((d) => factDigits.includes(d));
+  const urls = answer.match(/https?:\/\/\S+/g) ?? [];
+  if (!urls.every((u) => facts.includes(u))) return false;
+  const factNumbers = new Set(numbersIn(facts));
+  return numbersIn(answer).every((n) => factNumbers.has(n));
 }
 
 export async function groundedAnswer(

@@ -25,6 +25,8 @@ const schema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((v) => v === "true"),
+  /** Sign-ups allowed per IP per hour. */
+  SIGNUP_RATE_LIMIT: z.coerce.number().int().positive().default(10),
   DB_POOL_MAX: z.coerce.number().int().positive().default(5),
 });
 

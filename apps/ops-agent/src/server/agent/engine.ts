@@ -235,8 +235,9 @@ export function decide(input: AgentInput): AgentDecision {
 
   // 3. Fresh intents.
   const has = (i: Intent) => nlu.intents.includes(i);
+  const kb = retrieveKnowledge(input.text, input.knowledge);
 
-  if (input.isStart || (has("greeting") && nlu.intents.length === 1 && !mentionedCourse)) {
+  if (input.isStart || (has("greeting") && nlu.intents.length === 1 && !mentionedCourse && !kb)) {
     state.unknownCount = 0;
     const greet = input.settings.greeting.trim() || t.greeting(input.settings.agentName, input.org.name);
     return done(greet, "greeting", { quickReplies: t.menu, confidence: 0.95 });
@@ -292,7 +293,6 @@ export function decide(input: AgentInput): AgentDecision {
     });
   }
 
-  const kb = retrieveKnowledge(input.text, input.knowledge);
   if (kb) {
     state.unknownCount = 0;
     sources.push(kb.article.id);
