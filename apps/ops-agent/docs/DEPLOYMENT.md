@@ -40,17 +40,18 @@ Connection strings (Supavisor):
 | Env | `DATABASE_URL`, `MIGRATION_DATABASE_URL`, `ENCRYPTION_KEY`, `CRON_SECRET`, `APP_URL`, `LLM_PROVIDER` (+ LLM key) |
 | Deployment protection | Vercel Authentication on previews only; production is public |
 
-**Recommended:** connect the GitHub repository in Vercel (Project → Settings → Git) so every push
-to `main` deploys automatically. The initial deployment was created through the Vercel API with an
-install step that downloads the exact commit tarball from GitHub (the account had no GitHub login
-connection at the time):
+### Continuous deployment
 
-```
-installCommand: curl -sfL https://codeload.github.com/menarzullayev/project-alpha/tar.gz/<sha> \
-  | tar -xz --strip-components=3 --wildcards '*/apps/ops-agent/*' && npm ci
-```
+`main` is the production branch. The pipeline is: PR → CI (`ops-agent / verify`) → merge →
+`ops-agent / deploy` (GitHub Actions) → `vercel deploy --prod` → health smoke test.
 
-To redeploy a new commit that way, create a deployment with the new SHA in `installCommand`.
+- The deploy job needs the repository secret **`VERCEL_TOKEN`** (Vercel → Account Settings → Tokens;
+  GitHub → Settings → Secrets → Actions). Without it the job is skipped with a warning.
+- The Vercel project's install command is
+  `[ -d src ] || curl …/tar.gz/refs/heads/main | tar -x … ; npm ci` — CLI uploads already contain the
+  source, while an API/dashboard redeploy without files builds the latest `main` from GitHub.
+- Alternative: connect the repository in Vercel (Project → Settings → Git, root directory
+  `apps/ops-agent`, default install command); Vercel then deploys `main` itself and the deploy job can be removed.
 
 ## Alternative targets
 
