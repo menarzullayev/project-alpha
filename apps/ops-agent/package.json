@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "typecheck": "next typegen && tsc --noEmit -p tsconfig.test.json",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
