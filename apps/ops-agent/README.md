@@ -65,3 +65,4 @@ the global setup recreates the `ops_agent` schema there on every run.
 - [Deployment](docs/DEPLOYMENT.md)
 - [API & integrations](docs/API.md)
 - [Operations runbook](docs/RUNBOOK.md)
+- [Final report](FINAL_REPORT.md) — deployment URL, test results, limitations
