@@ -1,6 +1,7 @@
 name: ops-agent
 
 on:
+  workflow_dispatch:
   push:
     paths: ["apps/ops-agent/**", ".github/workflows/ops-agent.yml"]
   pull_request:
@@ -55,7 +56,7 @@ jobs:
   # Requires repository secret VERCEL_TOKEN (Vercel → Account Settings → Tokens).
   deploy:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency: { group: ops-agent-production, cancel-in-progress: false }
@@ -67,6 +68,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      - name: Check Vercel access
+        if: env.VERCEL_TOKEN != ''
+        run: |
+          api() { curl -s -o /tmp/body -w '%{http_code}' -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com$1"; }
+          code=$(api /v2/user)
+          echo "token → /v2/user: HTTP $code (user: $(jq -r '.user.username // "?"' /tmp/body))"
+          [ "$code" = 200 ] || { echo "::error::VERCEL_TOKEN is invalid or expired"; exit 1; }
+          code=$(api "/v2/teams/$VERCEL_ORG_ID")
+          echo "token → team $VERCEL_ORG_ID: HTTP $code"
+          [ "$code" = 200 ] || { echo "::error::Token cannot access team narzullayev — recreate it with Scope = \"narzullayev's team\""; exit 1; }
+          code=$(api "/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID")
+          echo "token → project opsagent-edu: HTTP $code"
+          [ "$code" = 200 ] || { echo "::error::Token cannot access project opsagent-edu"; exit 1; }
       - name: Deploy to Vercel (production)
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
