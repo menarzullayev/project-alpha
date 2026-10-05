@@ -9,7 +9,8 @@ deployment (browsers do this automatically). Errors share one shape:
 ```
 
 Codes: `validation_error` 400 · `bad_request` 400 · `unauthorized` 401 · `forbidden` 403 ·
-`not_found` 404 · `conflict` 409 · `rate_limited` 429 (`Retry-After` header) · `internal_error` 500.
+`not_found` 404 · `conflict` 409 · `password_change_required` 403 · `organization_suspended` 403 ·
+`account_suspended` 403 (login) · `rate_limited` 429 (`Retry-After` header) · `internal_error` 500.
 Every response carries `x-request-id`.
 
 ## Auth & workspace
@@ -21,6 +22,7 @@ Every response carries `x-request-id`.
 | POST | `/api/v1/auth/logout` | — | |
 | GET | `/api/v1/auth/me` | signed in | user, active org, role, memberships |
 | POST | `/api/v1/auth/switch-org` | member of target | `{orgId}` |
+| POST | `/api/v1/auth/change-password` | signed in, rate-limited | `{currentPassword,newPassword}`; signs out other sessions |
 | POST | `/api/v1/auth/accept-invite` | public / signed in | `{token,name?,password?}` |
 | POST | `/api/v1/organizations` | signed in | create another workspace |
 | PATCH | `/api/v1/org` | `org:manage` (owner) | `{name?,timezone?,currency?}` |
@@ -98,3 +100,8 @@ Bookings are idempotent per (slot, customer); a full slot returns 409.
 | CRM write, bookings, conversation replies, test chat | | ✓ | ✓ | ✓ |
 | courses, knowledge, agent settings, Telegram, team management, audit log | | | ✓ | ✓ |
 | organization settings, demo data | | | | ✓ |
+
+## Root (platform) API
+
+Super-admin endpoints live under `/api/root/*` and require a platform role plus a fresh TOTP
+verification. See [ROOT_PANEL.md](ROOT_PANEL.md#6-api-apiroot) for the full list.

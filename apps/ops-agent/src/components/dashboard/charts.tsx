@@ -9,7 +9,7 @@ export function DailyBars({ data, label }: { data: { day: string; value: number 
   const fmt = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
   return (
     <figure className="relative">
-      <div className="flex h-40 items-end gap-1 border-b border-slate-200" onMouseLeave={() => setHover(null)}>
+      <div className="flex h-40 items-end gap-1 border-b border-slate-200 dark:border-slate-700" onMouseLeave={() => setHover(null)}>
         {data.map((d, i) => (
           <button
             type="button"
@@ -21,7 +21,7 @@ export function DailyBars({ data, label }: { data: { day: string; value: number 
             aria-label={`${fmt(d.day)}: ${d.value} ${label}`}
           >
             <span
-              className={`w-full rounded-t-[4px] transition-colors ${hover === i ? "bg-brand-700" : "bg-brand-500"}`}
+              className={`w-full rounded-t-[4px] transition-colors ${hover === i ? "bg-brand-700 dark:bg-indigo-300" : "bg-brand-500 dark:bg-indigo-400"}`}
               style={{ height: `${d.value === 0 ? 2 : Math.max(4, (d.value / max) * 100)}%`, opacity: d.value === 0 ? 0.25 : 1 }}
             />
           </button>
@@ -29,14 +29,14 @@ export function DailyBars({ data, label }: { data: { day: string; value: number 
       </div>
       {hover !== null && (
         <div
-          className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full rounded-md bg-slate-900 px-2 py-1 text-xs text-white shadow"
+          className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full rounded-md bg-slate-900 px-2 py-1 text-xs text-white shadow dark:bg-slate-100 dark:text-slate-900"
           style={{ left: `${((hover + 0.5) / data.length) * 100}%` }}
           role="status"
         >
           <span className="font-medium">{data[hover].value}</span> {label} · {fmt(data[hover].day)}
         </div>
       )}
-      <div className="mt-1.5 flex justify-between text-xs text-slate-400">
+      <div className="mt-1.5 flex justify-between text-xs text-slate-400 dark:text-slate-500">
         <span>{data[0] && fmt(data[0].day)}</span>
         <span>{data.at(-1) && fmt(data.at(-1)!.day)}</span>
       </div>
@@ -63,11 +63,11 @@ export function FunnelBars({ rows }: { rows: { label: string; value: number }[] 
       {rows.map((r) => (
         <li key={r.label} className="text-sm" title={`${r.label}: ${r.value}`}>
           <div className="mb-1 flex justify-between">
-            <span className="text-slate-600">{r.label}</span>
-            <span className="font-medium tabular-nums text-slate-900">{r.value}</span>
+            <span className="text-slate-600 dark:text-slate-400">{r.label}</span>
+            <span className="font-medium tabular-nums text-slate-900 dark:text-slate-100">{r.value}</span>
           </div>
-          <div className="h-2 rounded-full bg-slate-100">
-            <div className="h-2 rounded-full bg-brand-500" style={{ width: `${r.value ? Math.max(3, (r.value / max) * 100) : 0}%` }} />
+          <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+            <div className="h-2 rounded-full bg-brand-500 dark:bg-indigo-400" style={{ width: `${r.value ? Math.max(3, (r.value / max) * 100) : 0}%` }} />
           </div>
         </li>
       ))}

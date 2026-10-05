@@ -1,4 +1,6 @@
+import { eq } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
+import { organizations } from "@/server/db/schema";
 import { getIntegrationById } from "@/server/domains/integrations";
 import { handleTelegramUpdate, telegramUpdateSchema } from "@/server/domains/telegram-webhook";
 import { safeEqual } from "@/server/lib/crypto";
@@ -29,6 +31,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
   if (integration.status !== "active") return ok();
+  // Suspended workspaces stop processing; acknowledge so Telegram does not retry.
+  const [org] = await db.select({ status: organizations.status }).from(organizations).where(eq(organizations.id, integration.orgId));
+  if (org?.status === "suspended") {
+    log.info("webhook ignored: organization suspended");
+    return Response.json({ ok: true, status: "ignored" });
+  }
 
   const rl = await checkRateLimit(db, `tg:${integration.id}`, 600, 60);
   if (!rl.allowed) return Response.json({ error: "rate_limited" }, { status: 429, headers: { "retry-after": String(rl.retryAfterSec) } });

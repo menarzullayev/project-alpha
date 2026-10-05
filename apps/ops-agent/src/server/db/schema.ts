@@ -21,6 +21,9 @@ import {
 export const app = pgSchema("ops_agent");
 
 export const roleEnum = app.enum("member_role", ["owner", "admin", "operator", "viewer"]);
+/** Platform-wide (root panel) roles. Independent of per-workspace roles. */
+export const platformRoleEnum = app.enum("platform_role", ["superadmin", "admin", "support"]);
+export const accountStatusEnum = app.enum("account_status", ["active", "suspended"]);
 export const leadStatusEnum = app.enum("lead_status", [
   "new",
   "contacted",
@@ -61,9 +64,18 @@ export const users = app.table(
     name: text("name").notNull(),
     passwordHash: text("password_hash").notNull(),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    platformRole: platformRoleEnum("platform_role"),
+    status: accountStatusEnum("status").notNull().default("active"),
+    suspendedAt: timestamp("suspended_at", { withTimezone: true }),
+    suspendedReason: text("suspended_reason"),
+    /** TOTP secret (AES-GCM encrypted). Required for root-panel access. */
+    totpSecretEncrypted: text("totp_secret_encrypted"),
+    totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
+    /** Users created by an operator must change their temporary password. */
+    mustChangePassword: boolean("must_change_password").notNull().default(false),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("users_email_uq").on(sql`lower(${t.email})`)],
+  (t) => [uniqueIndex("users_email_uq").on(sql`lower(${t.email})`), index("users_platform_role_idx").on(t.platformRole)],
 );
 
 export const organizations = app.table(
@@ -74,6 +86,10 @@ export const organizations = app.table(
     slug: text("slug").notNull(),
     timezone: text("timezone").notNull().default("Asia/Tashkent"),
     currency: text("currency").notNull().default("UZS"),
+    plan: text("plan").notNull().default("free"),
+    status: accountStatusEnum("status").notNull().default("active"),
+    suspendedAt: timestamp("suspended_at", { withTimezone: true }),
+    suspendedReason: text("suspended_reason"),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("organizations_slug_uq").on(t.slug)],
@@ -105,6 +121,8 @@ export const sessions = app.table(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     ip: text("ip"),
     userAgent: text("user_agent"),
+    /** Set when the user passes a TOTP challenge in this session (root panel step-up). */
+    mfaVerifiedAt: timestamp("mfa_verified_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("sessions_token_uq").on(t.tokenHash), index("sessions_user_idx").on(t.userId)],
@@ -433,3 +451,49 @@ export const rateLimits = app.table("rate_limits", {
   windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
   count: integer("count").notNull(),
 });
+
+// ---------------------------------------------------------------- platform (root panel)
+
+/** Platform-level audit trail: every root-panel action, never tenant-scoped. */
+export const platformAuditLogs = app.table(
+  "platform_audit_logs",
+  {
+    id: id(),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    actorEmail: text("actor_email"),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("platform_audit_created_idx").on(t.createdAt), index("platform_audit_action_idx").on(t.action, t.createdAt)],
+);
+
+export const platformSettings = app.table("platform_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").$type<unknown>().notNull(),
+  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: updatedAt(),
+});
+
+export const announcementSeverityEnum = app.enum("announcement_severity", ["info", "warning", "critical"]);
+
+/** Broadcasts from the platform team, shown as banners inside workspaces. */
+export const announcements = app.table(
+  "announcements",
+  {
+    id: id(),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    severity: announcementSeverityEnum("severity").notNull().default("info"),
+    audience: text("audience").notNull().default("all"),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull().defaultNow(),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("announcements_window_idx").on(t.startsAt, t.endsAt)],
+);

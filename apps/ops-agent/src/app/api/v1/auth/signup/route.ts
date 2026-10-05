@@ -3,9 +3,10 @@ import { env } from "@/server/env";
 import { errors } from "@/server/lib/errors";
 import { json, route, sessionCookie } from "@/server/http/api";
 import { enforceRateLimit } from "@/server/lib/rate-limit";
+import { getSetting } from "@/server/platform/settings";
 
 export const POST = route({}, async ({ db, body, ip, req }) => {
-  if (!env().SIGNUP_ENABLED) throw errors.forbidden("Sign-up is disabled on this deployment");
+  if (!env().SIGNUP_ENABLED || !(await getSetting(db, "signupEnabled"))) throw errors.forbidden("Sign-up is disabled on this deployment");
   await enforceRateLimit(db, `signup:${ip ?? "unknown"}`, env().SIGNUP_RATE_LIMIT, 3600);
   const input = await body(signupSchema);
   const r = await signup(db, input, { ip, userAgent: req.headers.get("user-agent") });
