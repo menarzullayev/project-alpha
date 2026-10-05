@@ -29,7 +29,10 @@ export async function signIn(page: Page, email: string) {
 
 export async function sendTestChat(page: Page, text: string) {
   const before = await page.locator("[aria-live=polite] .whitespace-pre-wrap").count();
-  await page.getByLabel("Message", { exact: true }).fill(text);
+  await expect(async () => {
+    await page.getByLabel("Message", { exact: true }).fill(text);
+    await expect(page.getByLabel("Message", { exact: true })).toHaveValue(text, { timeout: 1000 });
+  }).toPass({ timeout: 20_000 });
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.locator("[aria-live=polite] .whitespace-pre-wrap")).toHaveCount(before + 2);
   return (await page.locator("[aria-live=polite] .whitespace-pre-wrap").last().innerText()).trim();

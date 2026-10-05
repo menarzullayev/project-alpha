@@ -65,7 +65,12 @@ test("complaints are handed off and an operator can reply and hand back", async 
   expect(r).toContain("uzr");
   await page.getByRole("link", { name: "Open conversation" }).click();
   await expect(page.getByText("Needs human")).toBeVisible();
-  await page.getByLabel("Reply").fill("Salom! Men administratorman, hozir yordam beraman.");
+  // On a cold production page, typing can land before hydration resets the
+  // controlled textarea; retry until the button reflects the text.
+  await expect(async () => {
+    await page.getByLabel("Reply").fill("Salom! Men administratorman, hozir yordam beraman.");
+    await expect(page.getByRole("button", { name: "Send" })).toBeEnabled({ timeout: 1000 });
+  }).toPass({ timeout: 20_000 });
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("Men administratorman")).toBeVisible();
   await page.getByRole("button", { name: "Hand back to AI" }).click();
