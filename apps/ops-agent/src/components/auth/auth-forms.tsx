@@ -23,11 +23,12 @@ function useSubmit(fn: (form: FormData) => Promise<void>) {
   return { error, loading, onSubmit };
 }
 
-export function LoginForm() {
+/** `next` must already be a validated same-origin path (see `safeNext`). */
+export function LoginForm({ next = "/" }: { next?: string }) {
   const router = useRouter();
   const { error, loading, onSubmit } = useSubmit(async (f) => {
     await api("/api/v1/auth/login", { body: { email: f.get("email"), password: f.get("password") } });
-    router.replace("/dashboard");
+    router.replace(next);
     router.refresh();
   });
   return (
@@ -160,5 +161,62 @@ export function CreateOrgForm() {
         Create workspace
       </Button>
     </form>
+  );
+}
+
+export function ChangePasswordForm({ forced }: { forced: boolean }) {
+  const router = useRouter();
+  const [done, setDone] = useState(false);
+  const { error, loading, onSubmit } = useSubmit(async (f) => {
+    if (f.get("newPassword") !== f.get("confirmPassword")) throw new Error("Passwords do not match");
+    await api("/api/v1/auth/change-password", { body: { currentPassword: f.get("currentPassword"), newPassword: f.get("newPassword") } });
+    setDone(true);
+    router.replace("/");
+    router.refresh();
+  });
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div>
+        <h1 className="text-lg font-semibold text-slate-900">Change password</h1>
+        <p className="text-sm text-slate-500">
+          {forced ? "Your password was set by an administrator. Choose a new one to continue." : "Other sessions will be signed out."}
+        </p>
+      </div>
+      {error && <Alert>{error}</Alert>}
+      {done && <Alert tone="green">Password changed.</Alert>}
+      <Field label={forced ? "Temporary password" : "Current password"} htmlFor="currentPassword">
+        <Input id="currentPassword" name="currentPassword" type="password" autoComplete="current-password" required />
+      </Field>
+      <Field label="New password" htmlFor="newPassword" hint="At least 10 characters">
+        <Input id="newPassword" name="newPassword" type="password" autoComplete="new-password" required minLength={10} />
+      </Field>
+      <Field label="Confirm new password" htmlFor="confirmPassword">
+        <Input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" required minLength={10} />
+      </Field>
+      <Button type="submit" className="w-full" loading={loading}>
+        Change password
+      </Button>
+    </form>
+  );
+}
+
+export function SuspendedActions({ others }: { others: { orgId: string; orgName: string }[] }) {
+  const router = useRouter();
+  const go = async (path: string, body: unknown, to: string) => {
+    await api(path, { body }).catch(() => {});
+    router.replace(to);
+    router.refresh();
+  };
+  return (
+    <div className="space-y-2">
+      {others.map((o) => (
+        <Button key={o.orgId} variant="secondary" className="w-full" onClick={() => go("/api/v1/auth/switch-org", { orgId: o.orgId }, "/dashboard")}>
+          Switch to {o.orgName}
+        </Button>
+      ))}
+      <Button variant="ghost" className="w-full" onClick={() => go("/api/v1/auth/logout", {}, "/login")}>
+        Sign out
+      </Button>
+    </div>
   );
 }

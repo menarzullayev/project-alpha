@@ -28,6 +28,30 @@ Telegram → webhook (secret-verified, idempotent) → AI agent (grounded) → C
 | Reliability | zod validation, env validation, JSON logs with request ids, retries with backoff + `retry_after`, idempotency keys, Postgres rate limiting, CSRF Origin checks, security headers (CSP, HSTS…), health check, migrations, daily cron |
 | Docs | README, docs/ARCHITECTURE, SETUP, DEPLOYMENT, API, RUNBOOK |
 
+## Root (super-admin) panel — added later
+
+`/root` is a cross-tenant console for the platform team. Details are in [docs/ROOT_PANEL.md](docs/ROOT_PANEL.md).
+
+- **Dashboard:**
+  - Platform KPIs: organizations, users, messages, AI automation rate, leads, bookings, handoffs.
+  - Health: failed webhooks and deliveries, Telegram errors.
+  - 30-day growth charts, the most active organizations, and recent activity.
+- **User management:**
+  - Search and filter users; create them with a one-time password and a forced change.
+  - Edit, suspend or reactivate (a reason is required), reset passwords, sign out everywhere, reset 2FA.
+  - Assign platform roles; add or remove workspace memberships.
+- **Organizations:** usage, plan changes, members, Telegram status. Suspension blocks the dashboard and API, and the Telegram agent stops replying.
+- **System settings:** public sign-up, maintenance banner, plan defaults, workspace limit, session lifetime, 2FA policy.
+- **Announcements:** shown to all members or owners only, with severity, scheduling and an end-now action. They appear as banners in every workspace.
+- **Audit log:** filterable, with CSV export.
+- **Reports:** organizations and usage, users, daily growth, and the audit trail, exported as formula-safe CSV.
+- **Security:**
+  - Platform RBAC with three roles (support › admin › superadmin) and 12 permissions.
+  - Mandatory TOTP 2FA, re-verified for every new session and every 12 h.
+  - Admins cannot manage other operators. The last superadmin and the last workspace owner are protected.
+  - Every action is audited, with rate limits and CSRF origin checks.
+- **UI:** uz/ru/en, light/dark/system theme, responsive layout with a mobile drawer.
+
 ## Test results
 
 | Check | Result |

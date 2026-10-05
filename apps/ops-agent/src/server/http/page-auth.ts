@@ -15,10 +15,21 @@ export async function getPageSession(): Promise<SessionInfo | null> {
 export async function requirePage(permission: Permission = "dashboard:read"): Promise<{ session: SessionInfo; tenant: TenantContext }> {
   const session = await getPageSession();
   if (!session) redirect("/login");
+  if (session.user.mustChangePassword) redirect("/account/password");
   if (!session.org || !session.role) redirect("/onboarding");
+  if (session.org.status === "suspended") redirect("/suspended");
   if (!can(session.role, permission)) redirect("/dashboard?denied=1");
   return {
     session,
     tenant: { orgId: session.org.id, userId: session.user.id, role: session.role, actorType: "user" },
   };
 }
+
+/** Where a signed-in user lands by default. */
+export function homeFor(session: SessionInfo): string {
+  if (session.user.mustChangePassword) return "/account/password";
+  if (!session.org && session.user.platformRole) return "/root";
+  return "/dashboard";
+}
+
+export { safeNext } from "./safe-next";

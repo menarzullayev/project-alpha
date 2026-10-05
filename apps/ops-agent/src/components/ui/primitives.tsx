@@ -5,10 +5,10 @@ import { cn } from "@/lib/cn";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 const variants: Record<Variant, string> = {
-  primary: "bg-brand-600 text-white hover:bg-brand-700 shadow-sm",
-  secondary: "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 shadow-sm",
-  ghost: "text-slate-600 hover:bg-slate-100",
-  danger: "bg-white text-red-600 border border-red-200 hover:bg-red-50",
+  primary: "bg-brand-600 text-white hover:bg-brand-700 shadow-sm dark:bg-brand-500 dark:hover:bg-brand-600",
+  secondary: "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 shadow-sm dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-700",
+  ghost: "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+  danger: "bg-white text-red-600 border border-red-200 hover:bg-red-50 dark:bg-slate-800 dark:text-red-400 dark:border-red-900 dark:hover:bg-red-950",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; loading?: boolean; size?: "sm" | "md" }>(
@@ -32,7 +32,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
   },
 );
 
-const field = "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50";
+const field = "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:disabled:bg-slate-800";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...props }, ref) {
   return <input ref={ref} className={cn(field, "h-10", className)} {...props} />;
@@ -52,9 +52,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 
 export function Label({ children, htmlFor, hint }: { children: ReactNode; htmlFor?: string; hint?: string }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-slate-700">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
       {children}
-      {hint && <span className="ml-1 font-normal text-slate-400">{hint}</span>}
+      {hint && <span className="ml-1 font-normal text-slate-400 dark:text-slate-500">{hint}</span>}
     </label>
   );
 }
@@ -71,15 +71,15 @@ export function Field({ label, hint, htmlFor, children, className }: { label: st
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-xl border border-slate-200 bg-white shadow-sm", className)}>{children}</div>;
+  return <div className={cn("min-w-0 rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900", className)}>{children}</div>;
 }
 
 export function CardHeader({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+    <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
       <div>
-        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-        {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+        {description && <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{description}</p>}
       </div>
       {action}
     </div>
@@ -87,13 +87,13 @@ export function CardHeader({ title, description, action }: { title: string; desc
 }
 
 const tones = {
-  slate: "bg-slate-100 text-slate-700 ring-slate-200",
-  blue: "bg-blue-50 text-blue-700 ring-blue-200",
-  indigo: "bg-brand-50 text-brand-700 ring-brand-100",
-  green: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  amber: "bg-amber-50 text-amber-800 ring-amber-200",
-  red: "bg-red-50 text-red-700 ring-red-200",
-  violet: "bg-violet-50 text-violet-700 ring-violet-200",
+  slate: "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700",
+  blue: "bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-900",
+  indigo: "bg-brand-50 text-brand-700 ring-brand-100 dark:bg-indigo-950 dark:text-indigo-300 dark:ring-indigo-900",
+  green: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-900",
+  amber: "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-900",
+  red: "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950 dark:text-red-300 dark:ring-red-900",
+  violet: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:ring-violet-900",
 };
 export type Tone = keyof typeof tones;
 
@@ -105,8 +105,8 @@ export function PageHeader({ title, description, actions }: { title: string; des
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{title}</h1>
-        {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-50">{title}</h1>
+        {description && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
@@ -116,9 +116,9 @@ export function PageHeader({ title, description, actions }: { title: string; des
 export function EmptyState({ icon, title, description, action }: { icon?: ReactNode; title: string; description?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      {icon && <div className="mb-3 rounded-full bg-slate-100 p-3 text-slate-500">{icon}</div>}
-      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-      {description && <p className="mt-1 max-w-sm text-sm text-slate-500">{description}</p>}
+      {icon && <div className="mb-3 rounded-full bg-slate-100 p-3 text-slate-500 dark:bg-slate-800 dark:text-slate-400">{icon}</div>}
+      <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+      {description && <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -126,10 +126,10 @@ export function EmptyState({ icon, title, description, action }: { icon?: ReactN
 
 export function Alert({ tone = "red", children }: { tone?: "red" | "green" | "amber" | "blue"; children: ReactNode }) {
   const c = {
-    red: "border-red-200 bg-red-50 text-red-800",
-    green: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    amber: "border-amber-200 bg-amber-50 text-amber-900",
-    blue: "border-blue-200 bg-blue-50 text-blue-800",
+    red: "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200",
+    green: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+    amber: "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200",
+    blue: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200",
   }[tone];
   return (
     <div role={tone === "red" ? "alert" : "status"} className={cn("rounded-lg border px-3 py-2 text-sm", c)}>
@@ -141,21 +141,21 @@ export function Alert({ tone = "red", children }: { tone?: "red" | "green" | "am
 export function Table({ children }: { children: ReactNode }) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">{children}</table>
+      <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">{children}</table>
     </div>
   );
 }
 
 export function Th({ children, className }: { children?: ReactNode; className?: string }) {
-  return <th className={cn("whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-slate-500", className)}>{children}</th>;
+  return <th className={cn("whitespace-nowrap px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400", className)}>{children}</th>;
 }
 
 export function Td({ children, className }: { children?: ReactNode; className?: string }) {
-  return <td className={cn("px-4 py-3 align-middle text-slate-700", className)}>{children}</td>;
+  return <td className={cn("px-4 py-3 align-middle text-slate-700 dark:text-slate-300", className)}>{children}</td>;
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-md bg-slate-200/70", className)} />;
+  return <div className={cn("animate-pulse rounded-md bg-slate-200/70 dark:bg-slate-800", className)} />;
 }
 
 export function Avatar({ name, className }: { name?: string | null; className?: string }) {

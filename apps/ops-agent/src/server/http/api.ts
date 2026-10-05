@@ -111,6 +111,12 @@ export function route<P = Record<string, string>>(opts: RouteOptions, handler: H
       let tenant: TenantContext | undefined;
       if (opts.permission) {
         if (!session?.org || !session.role) throw errors.forbidden("No active organization");
+        if (session.user.mustChangePassword) {
+          throw new AppError("password_change_required", "Change your temporary password first", 403);
+        }
+        if (session.org.status === "suspended") {
+          throw new AppError("organization_suspended", "This workspace has been suspended by the platform team", 403);
+        }
         if (!can(session.role, opts.permission)) throw errors.forbidden();
         tenant = { orgId: session.org.id, userId: session.user.id, role: session.role, actorType: "user", ip };
       }

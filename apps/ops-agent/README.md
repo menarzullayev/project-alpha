@@ -25,6 +25,7 @@ Telegram message → AI agent → course / FAQ / price → trial booking → CRM
 | Notifications | Dashboard notification centre + optional manager Telegram chat |
 | Analytics | KPIs, leads per day, pipeline, top courses, automation rate, daily report |
 | Audit | Every change by staff or the agent is logged |
+| Root panel (`/root`) | Platform super-admin console: KPIs, users, organizations, plans, suspension, settings, announcements, audit, CSV reports; mandatory TOTP 2FA, platform RBAC, uz/ru/en, light/dark — see [docs/ROOT_PANEL.md](docs/ROOT_PANEL.md) |
 
 ## Quick start (local)
 
@@ -54,6 +55,7 @@ Or with Docker: `docker compose up --build` (Postgres + migrations + app).
 | `npm run db:migrate` | Apply pending migrations (idempotent) |
 | `npm run db:seed` | Create a demo workspace |
 | `npm run verify` | lint + typecheck + test + build |
+| `npm run root:grant -- <email> <superadmin\|admin\|support\|none> [name]` | Grant or revoke a platform role (creates the account with a one-time password if needed) |
 
 Tests use `TEST_DATABASE_URL` (default `postgres://postgres:postgres@localhost:5432/opsagent_test`);
 the global setup recreates the `ops_agent` schema there on every run.
@@ -64,5 +66,6 @@ the global setup recreates the `ops_agent` schema there on every run.
 - [Setup & environment variables](docs/SETUP.md)
 - [Deployment](docs/DEPLOYMENT.md)
 - [API & integrations](docs/API.md)
+- [Root (super-admin) panel](docs/ROOT_PANEL.md)
 - [Operations runbook](docs/RUNBOOK.md)
 - [Final report](FINAL_REPORT.md) — deployment URL, test results, limitations

@@ -22,10 +22,10 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
       ref={ref}
       onClose={onClose}
       onCancel={onClose}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-slate-200 p-0 shadow-xl backdrop:bg-slate-900/40"
+      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
     >
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-        <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
         <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Close">
           <X className="h-4 w-4" />
         </button>
@@ -227,7 +227,7 @@ export function InlineSelect({
             setBusy(false);
           }
         }}
-        className="h-8 rounded-md border border-slate-300 bg-white px-2 text-sm disabled:opacity-60"
+        className="h-8 rounded-md border border-slate-300 bg-white px-2 text-sm disabled:opacity-60 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>

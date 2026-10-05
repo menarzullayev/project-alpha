@@ -1,7 +1,7 @@
 import { Bot, CalendarCheck, Headset, LineChart, MessageCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getPageSession } from "@/server/http/page-auth";
+import { getPageSession, homeFor } from "@/server/http/page-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ const features = [
 
 export default async function Home() {
   const session = await getPageSession().catch(() => null);
-  if (session) redirect("/dashboard");
+  if (session) redirect(homeFor(session));
   return (
     <main className="min-h-screen bg-white">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
