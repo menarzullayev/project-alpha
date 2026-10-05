@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpsAgent — AI Operations Agent for education centres
 
-## Getting Started
+OpsAgent is a multi-tenant B2B SaaS that runs an AI agent on each customer's
+own **Telegram bot**. It answers prospective students, captures leads into a
+built-in CRM, books **trial lessons** into real time slots and hands
+conversations to staff when needed.
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+Telegram message → AI agent → course / FAQ / price → trial booking → CRM lead → human handoff → daily report
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Area | What you get |
+| --- | --- |
+| Auth & workspaces | Email + password, secure sessions, several workspaces per account, invitation links |
+| RBAC | `owner` › `admin` › `operator` › `viewer`, enforced on every API route and page |
+| CRM | Customers, lead pipeline (new → contacted → qualified → trial_booked → won/lost), assignment, notes |
+| Catalog | Courses (price, schedule, keywords) and trial-lesson slots with capacity |
+| Bookings | Overbooking-safe, idempotent; status tracking (confirmed / attended / no-show / cancelled) |
+| AI agent | Grounded answers in Uzbek, Russian and English; booking funnel; escalation rules; optional LLM |
+| Conversations | Live inbox, handoff queue, operator replies sent to Telegram, take over / hand back |
+| Knowledge base | Approved answers only — drafts are never sent to customers |
+| Telegram | Per-workspace bot onboarding (token → verification → webhook), sandbox bot for demos |
+| Notifications | Dashboard notification centre + optional manager Telegram chat |
+| Analytics | KPIs, leads per day, pipeline, top courses, automation rate, daily report |
+| Audit | Every change by staff or the agent is logged |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Quick start (local)
 
-## Learn More
+Requirements: Node 20.9+ (22 recommended) and PostgreSQL 14+.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cd apps/ops-agent
+npm ci
+cp .env.example .env            # then set DATABASE_URL, ENCRYPTION_KEY, CRON_SECRET
+npm run db:migrate
+DEMO_PASSWORD=ChangeMe12345 npm run db:seed   # optional: demo@opsagent.uz workspace
+npm run dev                     # http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Or with Docker: `docker compose up --build` (Postgres + migrations + app).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` / `build` / `start` | Next.js development / production build / serve |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript over app, tests and scripts |
+| `npm test` | Vitest: unit + integration + API + DB tests (needs Postgres, see below) |
+| `npm run test:e2e` | Playwright critical-path E2E against `E2E_BASE_URL` (default `http://localhost:3100`) |
+| `npm run db:generate` | Generate a SQL migration from `src/server/db/schema.ts` |
+| `npm run db:migrate` | Apply pending migrations (idempotent) |
+| `npm run db:seed` | Create a demo workspace |
+| `npm run verify` | lint + typecheck + test + build |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Tests use `TEST_DATABASE_URL` (default `postgres://postgres:postgres@localhost:5432/opsagent_test`);
+the global setup recreates the `ops_agent` schema there on every run.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Setup & environment variables](docs/SETUP.md)
+- [Deployment](docs/DEPLOYMENT.md)
+- [API & integrations](docs/API.md)
+- [Operations runbook](docs/RUNBOOK.md)

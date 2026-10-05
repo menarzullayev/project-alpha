@@ -71,8 +71,8 @@ export function errorResponse(err: unknown, requestId: string, log: Logger) {
 }
 
 /**
- * Cross-site request forgery guard for cookie-authenticated mutations: the
- * Origin header must match this deployment.
+ * Cross-site request forgery guard for all mutations: the Origin header must
+ * match this deployment (browsers always send it on cross-site POSTs).
  */
 function assertSameOrigin(req: Request) {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return;
@@ -95,6 +95,8 @@ export function route<P = Record<string, string>>(opts: RouteOptions, handler: H
     const started = Date.now();
     let status = 500;
     try {
+      // Every mutation must come from our own origin (blocks CSRF, including login CSRF).
+      assertSameOrigin(req);
       const db = getDb();
       const ip = clientIp(req);
       if (opts.rateLimit) {
@@ -105,7 +107,6 @@ export function route<P = Record<string, string>>(opts: RouteOptions, handler: H
       if (authMode !== "none") {
         session = await resolveSession(db, readCookie(req, SESSION_COOKIE));
         if (!session && authMode === "required") throw errors.unauthorized();
-        if (session) assertSameOrigin(req);
       }
       let tenant: TenantContext | undefined;
       if (opts.permission) {

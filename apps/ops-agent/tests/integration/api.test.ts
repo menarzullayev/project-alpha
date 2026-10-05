@@ -100,6 +100,11 @@ describe("authentication & authorization", () => {
     });
     expect(del.status).toBe(403);
     expect(await count(o.db, schema.courses, eq(schema.courses.orgId, o.org.id))).toBe(0);
+    // Unauthenticated mutations are protected too (login CSRF).
+    const loginNoOrigin = await call(loginRoute, apiRequest("POST", "/api/v1/auth/login", { origin: null, body: { email: o.user.email, password: "x" } }));
+    expect(loginNoOrigin.status).toBe(403);
+    const loginForeign = await call(loginRoute, apiRequest("POST", "/api/v1/auth/login", { origin: "https://evil.example", body: { email: o.user.email, password: "x" } }));
+    expect(loginForeign.status).toBe(403);
     // GET needs no Origin.
     expect((await call(coursesList, apiRequest("GET", "/api/v1/courses", { token: o.token, origin: null }))).status).toBe(200);
     // Same host via proxy headers is accepted.
