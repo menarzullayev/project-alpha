@@ -203,7 +203,7 @@ def workflow(args: argparse.Namespace) -> int:
 
 
 def add_record(args: argparse.Namespace) -> int:
-    payload = {key: value for key, value in vars(args).items() if key not in {"command", "path", "kind"} and value is not None}
+    payload = {key: value for key, value in vars(args).items() if key not in {"command", "path", "kind", "func"} and value is not None}
     path = record(Path(args.path).resolve(), args.kind, payload)
     print(f"Recorded {args.kind}: {path.relative_to(Path(args.path).resolve())}")
     return 0
