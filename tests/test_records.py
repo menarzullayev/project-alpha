@@ -1,12 +1,14 @@
+import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 import sys
 sys.path.insert(0, str(ROOT / "cli"))
 
-from project_alpha import init
+from project_alpha import init, main
 from project_alpha_integrity import run_integrity_audit
 from project_alpha_workflow import record
 
@@ -48,6 +50,22 @@ class CanonicalRecordTests(unittest.TestCase):
             })
             code, status, findings = run_integrity_audit(project)
             self.assertEqual((code, status), (0, "PASS"), findings)
+
+    def test_evidence_cli_entrypoint_writes_record_and_event(self):
+        # Exercises argparse dispatch: the handler stored in the namespace must not leak into the event payload.
+        with tempfile.TemporaryDirectory() as tmp:
+            project = self.make_project(tmp)
+            argv = [
+                "project-alpha", "evidence", str(project), "--evidence-id", "EVID-CLI", "--stage", "03-market-research",
+                "--claim", "Claim", "--source", "https://example.com", "--date", "2026-09-13",
+                "--confidence", "high", "--type", "FACT", "--risk", "LOW",
+            ]
+            with mock.patch.object(sys, "argv", argv):
+                self.assertEqual(main(), 0)
+            self.assertTrue((project / "docs" / "evidence" / "EVID-CLI.md").exists())
+            events = list((project / ".project-alpha" / "history" / "events").glob("*-evidence-recorded.json"))
+            self.assertEqual(len(events), 1)
+            self.assertNotIn("func", json.loads(events[0].read_text(encoding="utf-8")))
 
     def test_handoff_record_creates_ready_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
